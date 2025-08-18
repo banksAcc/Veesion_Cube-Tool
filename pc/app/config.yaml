@@ -1,0 +1,35 @@
+ble:
+  name_prefix: "ESP32-RGB-BLE"     # oppure usa "addr" per collegarti diretto a un indirizzo
+  addr: null                       # es. "44:1D:64:F4:AC:D2" su Linux/Mac, GUID su Windows
+  scan_timeout: 8.0                # secondi
+
+capture:
+  frequency_ms: 200
+  output_root: "captures"          # può stare anche in OneDrive; io terrei locale per prestazioni
+  use_camera: false                 # false = test mode (usa immagini da una cartella)
+  camera_id: 0                     # id della webcam (0 di solito va)
+  image_format: "tiff"             # "jpg" o "png"
+  jpeg_quality: 90
+  tiff_compression: "lzw"          # none | lzw | deflate | packbits
+  test_source_dir: "../image_to_be_used"   # usato se use_camera=false
+  stop_on_test_exhausted: false    # se true, termina la sessione quando finiscono le immagini
+  stop_on_ble_disconnect: true     # stop autom. scatto se cade BLE
+  keep_session_frames_on_error: true # se errore durante stop/rename, non rimuovere nulla
+
+pose:
+  enabled: true
+  method: "charuco"                # "charuco" | "custom"
+  max_parallel_jobs: 3             # ok 3 (CPU permettendo)
+  delete_frames_after_processing: true
+  results_format: "json"           # json (consigliato)
+  charuco:
+    dictionary: "DICT_5X5_100"      # richiede opencv-contrib
+    squares_x: 3
+    squares_y: 3
+    square_length_mm: 25.0
+    marker_length_mm: 18.75
+  camera_calibration_npz: "../calib/calib_data.npz"  # deve contenere 'camera_matrix' e 'dist_coeffs'
+
+runtime:
+  debug: true                      # log più verboso
+  log_to_file: true               # se vuoi un log globale, altrimenti solo console
