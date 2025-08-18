@@ -1,4 +1,4 @@
-[SESSION] start @ 2025-08-19T00:38:38.704797 freq=200ms use_camera=False
+[SESSION] start @ 2025-08-19T00:42:07.570584 freq=200ms use_camera=False
 [CAPTURE] Test mode: copying from ..\image_to_be_used, freq=200ms, stop_on_exhausted=False
-[SESSION] stop @ 2025-08-19T00:38:39.905971
+[SESSION] stop @ 2025-08-19T00:42:08.116976
 [CAPTURE] Test mode: loop terminato
