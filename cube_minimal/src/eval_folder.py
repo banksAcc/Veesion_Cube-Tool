@@ -23,6 +23,7 @@ def main():
     ap.add_argument('--camera', default='config/camera.yaml')
     ap.add_argument('--edge_mm', type=float, default=60.0)
     ap.add_argument('--marker_mm', type=float, default=55.0)
+
     args = ap.parse_args()
 
     K, dist = load_camera(args.camera)

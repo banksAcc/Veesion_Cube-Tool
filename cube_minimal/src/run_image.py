@@ -6,8 +6,7 @@ from pathlib import Path
 
 from .cube_model import build_cube_id_to_obj
 from .detect import detect_markers
-from .pose import gather_obj_img_points, estimate_pose_epnp
-
+from .pose import gather_obj_img_points, estimate_pose_ransac, refit_front_faces, estimate_pose_epnp
 
 def load_camera(path):
     with open(path, 'r') as f:
@@ -86,10 +85,14 @@ def main():
     ap.add_argument('--viz', action='store_true', help='Produce overlay di visualizzazione')
     ap.add_argument('--out', type=str, default='', help='Percorso file output overlay (png/jpg)')
     ap.add_argument('--show', action='store_true', help='Mostra una finestra con il risultato')
+    ap.add_argument('--nodist', action='store_true')
+    # dopo aver caricato K, dist:
     args = ap.parse_args()
 
     # Carica camera
     K, dist = load_camera(args.camera)
+    if args.nodist:
+        dist = dist * 0
 
     # Geometria cubo -> punti 3D corner dei marker
     id_to_obj = build_cube_id_to_obj(edge_mm=args.edge_mm, marker_mm=args.marker_mm)
@@ -104,11 +107,13 @@ def main():
     obj, img = gather_obj_img_points(det, id_to_obj)
     if obj is None:
         raise SystemExit("Nessun marker valido trovato nell'immagine")
-    rvec, tvec = estimate_pose_epnp(obj, img, K, dist)
+    
+    rvec, tvec, inliers = estimate_pose_ransac(obj, img, K, dist)
+    rvec, tvec = refit_front_faces(det, id_to_obj, K, dist, rvec, tvec)
 
-    print('rvec:', rvec.ravel())
-    print('tvec (mm):', tvec.ravel())  # Centro del cubo nel frame camera
-
+    print(f"inliers: {None if inliers is None else inliers.size} / {len(img)} punti")
+    print("rvec:", rvec.ravel())
+    print("tvec (mm):", tvec.ravel())
     if args.viz:
         # Prepara BGR per disegno
         bgr = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
