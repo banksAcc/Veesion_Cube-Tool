@@ -6,9 +6,9 @@ from pathlib import Path
 
 from .cube_model import build_cube_id_to_obj
 from .detect import detect_markers
-from .pose import gather_obj_img_points, estimate_pose_ransac, refit_front_faces, estimate_pose_epnp
+from .pose import gather_obj_img_points, estimate_pose_ransac, refit_front_faces, estimate_center_from_single_markers
 
-def load_camera_any(path: str):
+def load_camera(path: str):
     """
     Carica K (3x3) e dist (1xN) da .yaml/.yml (OpenCV), .npz (NumPy) o .json.
     .npz: accetta chiavi: cameraMatrix/K/mtx e distCoeffs/dist/D/distortion_coefficients
@@ -118,14 +118,11 @@ def main():
     ap.add_argument('--viz', action='store_true', help='Produce overlay di visualizzazione')
     ap.add_argument('--out', type=str, default='', help='Percorso file output overlay (png/jpg)')
     ap.add_argument('--show', action='store_true', help='Mostra una finestra con il risultato')
-    ap.add_argument('--nodist', action='store_true')
     # dopo aver caricato K, dist:
     args = ap.parse_args()
 
     # Carica camera
     K, dist = load_camera(args.camera)
-    if args.nodist:
-        dist = dist * 0
 
     # Geometria cubo -> punti 3D corner dei marker
     id_to_obj = build_cube_id_to_obj(edge_mm=args.edge_mm, marker_mm=args.marker_mm)
@@ -143,6 +140,21 @@ def main():
     
     rvec, tvec, inliers = estimate_pose_ransac(obj, img, K, dist)
     rvec, tvec = refit_front_faces(det, id_to_obj, K, dist, rvec, tvec)
+    
+    # ... dopo aver ottenuto det, K, dist
+    O_rob, n_used, dbg = estimate_center_from_single_markers(
+        det, K, dist, marker_mm=args.marker_mm, cube_edge_mm=args.edge_mm,
+        angle_weight=True, huber_delta_mm=50.0
+    )
+    if O_rob is not None:
+        print(f"[ROBUST] centro (mm) da singoli marker = {O_rob}  | markers usati = {n_used}")
+        # Se differisce molto dalla tvec del PnP globale, fidati di quello robusto:
+        # (Soglia: ~0.3*edge o 20 mm a scelta)
+        if 'tvec' in locals():
+            diff = np.linalg.norm(O_rob - tvec.ravel())
+            if diff > max(0.3*args.edge_mm, 20.0):
+                print(f"[WARN] differenza {diff:.1f} mm: uso stima robusta al posto del PnP globale.")
+                tvec = O_rob.reshape(3,1)
 
     print(f"inliers: {None if inliers is None else inliers.size} / {len(img)} punti")
     print("rvec:", rvec.ravel())
