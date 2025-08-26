@@ -21,7 +21,7 @@ def build_cube_id_to_obj(edge_mm=60.0, marker_mm=55.0, id_order=None):
       { '+X':0, '-X':1, '+Y':2, '-Y':3, '+Z':4, '-Z':5 }
     """
     if id_order is None:
-        id_order = {"+X":2, "-X":0, "+Y":3, "-Y":4, "+Z":1, "-Z":5}
+        id_order = {"+X":2, "-X":0, "+Y":4, "-Y":3, "+Z":5, "-Z":1}
 
     L = float(edge_mm)
     s = float(marker_mm)
