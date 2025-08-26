@@ -9,7 +9,7 @@ class Detection:
 
 
 def get_dictionary():
-    return cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_100)
+    return cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 
 
 def detect_markers(gray) -> Detection:

@@ -11,8 +11,8 @@ from .pose import gather_obj_img_points, estimate_pose_ransac, refit_front_faces
 def load_camera(path):
     with open(path, 'r') as f:
         y = yaml.safe_load(f)
-    K = np.array(y['camera_matrix']['data']).reshape(3, 3)
-    dist = np.array(y['distortion_coefficients']['data']).ravel()
+    K = np.array(y['cameraMatrix']['data']).reshape(3, 3)
+    dist = np.array(y['distCoeffs']['data']).ravel()
     return K, dist
 
 
