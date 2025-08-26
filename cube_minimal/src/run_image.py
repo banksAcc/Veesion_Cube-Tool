@@ -8,7 +8,7 @@ from .cube_model import build_cube_id_to_obj
 from .detect import detect_markers
 from .pose import gather_obj_img_points, estimate_pose_ransac, refit_front_faces, estimate_pose_epnp
 
-def load_camera_any(path: str):
+def load_camera(path: str):
     """
     Carica K (3x3) e dist (1xN) da .yaml/.yml (OpenCV), .npz (NumPy) o .json.
     .npz: accetta chiavi: cameraMatrix/K/mtx e distCoeffs/dist/D/distortion_coefficients
@@ -47,8 +47,6 @@ def load_camera_any(path: str):
 
     raise ValueError(f"Formato non supportato per {p}. Usa .yaml/.yml/.npz")
 
-
-
 def cube_vertices(edge_mm: float):
     """8 vertici del cubo centrato nell'origine (frame oggetto)."""
     L = float(edge_mm)
@@ -80,7 +78,7 @@ def draw_overlay(bgr, rvec, tvec, K, dist, id_to_obj, det, edge_mm):
 
     # 2) Assi del frame oggetto al centro del cubo
     #    usa lunghezza asse pari a ~1/2 lato cubo per visibilità
-    axis_len = max(10.0, edge_mm * 0.5)  # mm
+    axis_len = max(60.0, edge_mm * .5)  # mm
     try:
         cv2.drawFrameAxes(out, K, dist, rvec, tvec, axis_len)
     except Exception:
