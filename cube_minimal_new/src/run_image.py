@@ -6,47 +6,14 @@ from pathlib import Path
 
 from .cube_model import build_cube_id_to_obj
 from .detect import detect_markers
-from .pose import gather_obj_img_points, estimate_pose_ransac, refit_front_faces, estimate_pose_epnp
+from .pose import gather_obj_img_points, estimate_pose_ransac
 
-def load_camera_any(path: str):
-    """
-    Carica K (3x3) e dist (1xN) da .yaml/.yml (OpenCV), .npz (NumPy) o .json.
-    .npz: accetta chiavi: cameraMatrix/K/mtx e distCoeffs/dist/D/distortion_coefficients
-    .yaml: accetta sia OpenCV classico (camera_matrix/distortion_coefficients)
-           sia K/dist/mtx/D/distCoeffs
-    """
-    p = Path(path)
-    ext = p.suffix.lower()
-
-    if ext in (".yml", ".yaml"):
-        with open(p, "r") as f:
-            y = yaml.safe_load(f)
-        # K
-        if "camera_matrix" in y and "data" in y["camera_matrix"]:
-            K = np.array(y["camera_matrix"]["data"], dtype=float).reshape(3, 3)
-        else:
-            K = np.array(y.get("cameraMatrix") or y.get("K") or y.get("mtx"), dtype=float).reshape(3, 3)
-        # dist
-        if "distortion_coefficients" in y and "data" in y["distortion_coefficients"]:
-            dist = np.array(y["distortion_coefficients"]["data"], dtype=float).ravel()
-        else:
-            dist = np.array(y.get("distCoeffs") or y.get("dist") or y.get("D"), dtype=float).ravel()
-        return K, dist
-
-    if ext == ".npz":
-        data = np.load(p)
-        K = None
-        dist = None
-        for k in ("cameraMatrix", "K", "mtx", "camera_matrix"):
-            if k in data: K = data[k]
-        for d in ("distCoeffs", "dist", "D", "distortion_coefficients"):
-            if d in data: dist = data[d]
-        if K is None or dist is None:
-            raise ValueError(f"Nel file {p.name} non trovo K/dist. Chiavi presenti: {list(data.keys())}")
-        return np.array(K, dtype=float).reshape(3, 3), np.array(dist, dtype=float).ravel()
-
-    raise ValueError(f"Formato non supportato per {p}. Usa .yaml/.yml/.npz")
-
+def load_camera(path):
+    with open(path, 'r') as f:
+        y = yaml.safe_load(f)
+    K = np.array(y['camera_matrix']['data']).reshape(3, 3)
+    dist = np.array(y['distortion_coefficients']['data']).ravel()
+    return K, dist
 
 
 def cube_vertices(edge_mm: float):
@@ -142,7 +109,6 @@ def main():
         raise SystemExit("Nessun marker valido trovato nell'immagine")
     
     rvec, tvec, inliers = estimate_pose_ransac(obj, img, K, dist)
-    rvec, tvec = refit_front_faces(det, id_to_obj, K, dist, rvec, tvec)
 
     print(f"inliers: {None if inliers is None else inliers.size} / {len(img)} punti")
     print("rvec:", rvec.ravel())
