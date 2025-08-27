@@ -1,1 +1,4 @@
 __pycache__
+dataset/
+img_dataset/
+out_diag/
