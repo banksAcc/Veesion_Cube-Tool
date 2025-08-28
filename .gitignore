@@ -1,5 +1,5 @@
 __pycache__
-dataset/*
+dataset
 test_01
 test_02
 !dataset/README.md
