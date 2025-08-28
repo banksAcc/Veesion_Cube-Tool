@@ -1,120 +1,75 @@
-# ESP32 BLE Controller con LED RGB e Display OLED
+# ESP32 BLE Controller with RGB LED and OLED Display
 
-## Panoramica
-Questo progetto implementa un **controller BLE basato su ESP32 DevKit**, con:
-- **LED RGB a anodo comune** come indicatore di stato.
-- **Display OLED SSD1306 128x64 I²C** per la visualizzazione dello stato e messaggi.
-- **Due pulsanti fisici** per la gestione della connessione BLE e per l’invio di eventi.
-
-Il sistema permette di:
-- Accendere/spegnere il BLE con pressioni lunghe (≥4s) sul pulsante BLE.
-- Disconnettere rapidamente il dispositivo BLE con una pressione breve (<4s).
-- Mostrare in tempo reale lo stato del sistema su LED e Display.
-- Inviare messaggi START/END verso il centrale BLE con l’altro pulsante.
-- Visualizzare messaggi in arrivo (es. avvio/fine calcolo posa).
-
----
+Firmware for an ESP32 DevKit that exposes a BLE interface to trigger image
+capture on a PC. It includes user feedback via a common-anode RGB LED and a
+128×64 I²C SSD1306 OLED display, plus two physical buttons.
 
 ## Hardware
 
-### Componenti principali
 - **ESP32 DevKit** (ESP-WROOM-32)
-- **LED RGB anodo comune 5V** con resistenze sui catodi.
-- **Display OLED SSD1306** (128x64 px, I²C, indirizzo 0x3C).
-- **Due pulsanti a pressione** collegati a GPIO con `INPUT_PULLUP`.
+- **RGB LED (common anode)** with resistors on the cathodes
+- **SSD1306 OLED** display (128×64, I²C address 0x3C)
+- **Two push buttons** using `INPUT_PULLUP`
 
-### Collegamenti
-- **OLED**: SDA → GPIO21, SCL → GPIO22, VCC=3.3V, GND.
-- **LED RGB**:
-  - Anodo comune a +5V con resistenze sui catodi.
-  - R=GPIO15, G=GPIO5, B=GPIO4.
-- **Pulsanti**:
-  - BTN_EVENT → GPIO16 (gestione START/END).
-  - BTN_BLE → GPIO17 (gestione BLE ON/OFF e disconnessione).
+### Connections
 
----
+- **OLED**: SDA → GPIO21, SCL → GPIO22, VCC=3.3V, GND
+- **LED RGB**: R=GPIO15, G=GPIO5, B=GPIO4 (anode to +5V)
+- **Buttons**: BTN_EVENT → GPIO16, BTN_BLE → GPIO17
 
-## Logica di funzionamento
+## Behaviour
 
-### LED RGB
-- **ADV (advertising)**: LED blu scuro con effetto *breathing* (fade in/out).  
-- **CONNECTED**: LED verde fisso (intensità 10%).  
-- **ARMING (pressione BTN17)**: LED giallo oro lampeggiante rapido.  
-- **SENDING (evento in corso)**: LED giallo tenue fisso.  
-- **EVENT_RED (BTN16 premuto, solo se connesso)**: LED rosso tenue.  
-- **OFF**: LED spento.
+### LED States
 
-### Display OLED
-- **BLE ON (advertising)**: mostra `STATUS: FREE` + spinner animato + icona batteria.  
-- **CONNECTED**: mostra `STATUS: OK` + icona batteria.  
-- **DISCONNECTED / OFF**: mostra `BLE OFF`, display spento dopo 1s.  
-- **SENDING**: mostra `Invio` con puntini animati.  
-- **RX messaggi BLE**: 
-  - `COMPUTATION START` → banner in alto `Pose Exti`.  
-  - `COMPUTATION END` → rimuove banner.  
+- **ADV (advertising)**: blue breathing effect
+- **CONNECTED**: solid green
+- **ARMING (BTN17 press)**: fast yellow blink
+- **SENDING**: solid dim yellow
+- **EVENT_RED**: red while BTN16 is pressed and connected
+- **OFF**: LED off
 
-### Pulsanti
+### OLED Display
+
+- **BLE ON (advertising)**: shows `STATUS: FREE` with spinner
+- **CONNECTED**: shows `STATUS: OK`
+- **DISCONNECTED/OFF**: shows `BLE OFF`, then turns off after 1 s
+- **SENDING**: shows `Sending…`
+- **BLE RX messages**: `COMPUTATION START` displays a banner, `COMPUTATION END`
+  removes it
+
+### Buttons
+
 - **BTN_BLE (GPIO17)**:
-  - Pressione lunga ≥4s → toggle BLE ON/OFF (con disconnect se connesso).
-  - Pressione breve <4s → disconnette e torna in advertising.
+  - Long press ≥4 s → toggle BLE ON/OFF (disconnect if connected)
+  - Short press <4 s → disconnect and return to advertising
 - **BTN_EVENT (GPIO16)**:
-  - Alla pressione → invia `START\n`, LED rosso tenue (se connesso), display `Invio…`.
-  - Al rilascio → invia `END\n`, ritorno allo stato precedente.
+  - Press → send `START\n`, LED shows red, display `Sending…`
+  - Release → send `END\n`
 
-#### Rilevamento long press
+## Software Structure
 
-```
-tempo (ms): 0    50   550   800
-livello   : HIGH \____LOW____/ HIGH
-               fell longPress  rose
-```
+- `main.ino` – orchestrates buttons, BLE and UI
+- `config.h` – pin definitions and parameters
+- `LedManager.*` – RGB LED effects (inverted for common anode)
+- `DisplayManager.*` – SSD1306 display management
+- `BleManager.*` – NimBLE-Arduino wrapper (UART-like service)
+- `Buttons.h` – debounce and short/long press detection
 
-La durata della pressione è `t_rilascio - t_pulsazione`; se supera `longMs`
-si ottiene l'evento `longPress`. Maggiori dettagli in [`docs/buttons.md`](docs/buttons.md).
+## Notes
 
----
+- LEDC PWM: 5 kHz, 12-bit resolution, global brightness limited to 10%
+- Display powers off physically when BLE is off
+- BLE messages are trimmed and uppercased for robustness
 
-## Struttura software
+## Getting Started
 
-### File principali
-- `main.ino` – orchestratore: gestisce logica dei pulsanti e richiama i manager.  
-- `config.h` – definizioni pin e parametri (PWM, brightness, I²C).  
-- `LedManager.{h,cpp}` – gestione effetti LED RGB con PWM (inversione per anodo comune).  
-- `DisplayManager.{h,cpp}` – gestione display SSD1306 (stati, animazioni, icone).  
-- `BleManager.{h,cpp}` – wrapper su NimBLE-Arduino (service UART-like).  
-- `Buttons.h` – debounce e gestione eventi dei pulsanti.  
-- `UiState.h` – enum degli stati UI.
+1. Install libraries via the Arduino Library Manager: `NimBLE-Arduino`,
+   `Adafruit SSD1306`, `Adafruit GFX`
+2. Wire components as described above
+3. Compile and upload using the **ESP32 Dev Module** board
+4. Connect with a BLE central to send/receive messages
 
-### Librerie necessarie
-- **NimBLE-Arduino** (BLE leggero).  
-- **Adafruit SSD1306**.  
-- **Adafruit GFX**.
+## License
 
----
+MIT License.
 
-## Note tecniche
-- PWM LEDC: frequenza 5 kHz, risoluzione 12 bit, luminosità globale limitata al 10%.  
-- Display OLED: acceso solo se BLE attivo; spento fisicamente dopo 1s da OFF.  
-- Gestione robusta dei pulsanti con debounce + rilevamento short/long press.  
-- RX BLE normalizzato (`trim` + `uppercase`) per robustezza.
-
----
-
-## Come replicare
-1. Installare librerie da Library Manager: `NimBLE-Arduino`, `Adafruit SSD1306`, `Adafruit GFX`.  
-2. Collegare i componenti come descritto in sezione hardware.  
-3. Caricare il firmware con board **ESP32 Dev Module**.  
-4. Usare un’app BLE o un centrale per connettersi e inviare/leggere i messaggi.
-
----
-
-## Stato del progetto
-- **Funzionale** con logiche LED+Display integrate.  
-- In arrivo: lettura reale livello batteria e visualizzazione percentuale.  
-- Possibili estensioni: invio di pacchetti dati più complessi, interfaccia web via Wi-Fi.
-
----
-
-## Autori
-Progetto sviluppato come collaborazione di ingegneria elettronica, informatica e firmware.  
-Obiettivo: documentare e replicare un **sistema BLE ESP32 con UI visiva**.
