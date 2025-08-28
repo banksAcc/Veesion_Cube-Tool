@@ -1,0 +1,5 @@
+bleak>=0.22
+PyYAML>=6.0
+opencv-contrib-python>=4.9
+numpy>=1.26
+pypylon>=4.2
