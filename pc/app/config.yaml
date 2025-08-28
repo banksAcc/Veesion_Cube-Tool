@@ -6,7 +6,7 @@ ble:
 capture:
   frequency_ms: 200
   output_root: "../captures"          # can also be in OneDrive; keeping it local is faster
-  simulate_camera: false            # true = test mode (uses images from a folder)
+  simulate_camera: true            # true = test mode (uses images from a folder)
   camera_type: "webcam"            # "webcam", "ip", etc.
   camera_id: 0                     # webcam id (0 usually works)
   camera_serial: null              # serial number for industrial cameras
@@ -18,11 +18,12 @@ capture:
   stop_on_test_exhausted: false    # if true, end session when images finish
   stop_on_ble_disconnect: true     # auto stop capture if BLE disconnects
   keep_session_frames_on_error: true # if stop/rename fails, keep session frames
+
 pose:
   enabled: true
   method: "cube"                   # "cube" | "custom"
   max_parallel_jobs: 3             # 3 is fine (CPU permitting)
-  delete_frames_after_processing: true
+  delete_frames_after_processing: false
   results_format: "json"           # json (recommended)
   cube:
     dictionary: "4X4_50"
@@ -32,6 +33,6 @@ pose:
   camera_calibration_npz: "../calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
 
 runtime:
-  debug: true                      # extra debug behavior
+  debug: false                      # extra debug behavior
   log_level: INFO                 # DEBUG, INFO, WARNING, ERROR
-  log_to_file: true               # write global app.log in addition to console
+  log_to_file: false               # write global app.log in addition to console
