@@ -60,11 +60,22 @@ class BaseCapture:
         if fmt in ("png",):
             ok = cv2.imwrite(str(path), frame)
         elif fmt in ("tif", "tiff"):
-            # optional: compression from config
-            comp_map = {"none": 1, "lzw": 2, "packbits": 3, "deflate": 4}
+            # OpenCV's ``IMWRITE_TIFF_COMPRESSION`` expects specific values from
+            # ``TiffCompressionFlags``. Our configuration exposes a small,
+            # human‑readable subset which we translate here.
+            comp_map = {
+                "none": 1,       # no compression
+                "lzw": 5,        # Lempel-Ziv-Welch
+                "deflate": 8,    # zlib/deflate
+                "packbits": 32773,  # Macintosh RLE
+            }
             comp_name = str(self.cfg["capture"].get("tiff_compression", "none")).lower()
             comp = comp_map.get(comp_name, 1)
-            ok = cv2.imwrite(str(path), frame, [int(cv2.IMWRITE_TIFF_COMPRESSION), comp])
+            ok = cv2.imwrite(
+                str(path),
+                frame,
+                [int(cv2.IMWRITE_TIFF_COMPRESSION), int(comp)],
+            )
         else:
             ok = cv2.imwrite(str(path), frame, [int(cv2.IMWRITE_JPEG_QUALITY), self.jpeg_quality])
 
