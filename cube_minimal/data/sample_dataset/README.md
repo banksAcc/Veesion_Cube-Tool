@@ -7,10 +7,10 @@ Le immagini `example_*.png` mostrano un cubo con marker ArUco già pronto per la
 
 1. Copia le nuove immagini in questa cartella (`cube_minimal/data/sample_dataset/`).
 2. Usa nomi descrittivi (es. `nuovo_01.png`).
-3. Richiama l'immagine dalla CLI usando l'opzione `--sample-dir`:
+3. Richiama l'immagine dalla CLI specificando il percorso completo con l'opzione `--image`:
 
 ```bash
-python -m cube_minimal.src.cli.estimate_one --sample-dir cube_minimal/data/sample_dataset --image nuovo_01.png --camera <camera.npz> --marker_size <m> --cube_size <m>
+python -m cube_minimal.src.cli.estimate_one --image cube_minimal/data/sample_dataset/nuovo_01.png --camera <camera.npz> --marker_size <m> --cube_size <m>
 ```
 
-Le immagini possono anche essere richiamate direttamente nell'API passando `sample_dir`.
+Le immagini possono anche essere richiamate direttamente nell'API usando il percorso completo.
