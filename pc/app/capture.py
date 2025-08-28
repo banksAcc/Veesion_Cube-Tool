@@ -1,3 +1,20 @@
+"""Capture backends for the PC application.
+
+This module provides a small hierarchy of capture strategies:
+
+* :class:`BaseCapture` defines helpers for persisting frames to disk using the
+  format configured in ``config.yaml``.
+* :class:`CameraCapture` grabs frames from a physical camera through OpenCV's
+  :class:`~cv2.VideoCapture`.  The backend works with a generic UVC webcam and
+  is ready for Basler ``pypylon`` integration once available.
+* :class:`TestCapture` emulates acquisition by copying images from a directory,
+  allowing deterministic runs without any camera.
+
+``SessionManager`` (see :mod:`session_manager`) chooses between
+``CameraCapture`` and ``TestCapture`` based on the ``capture.use_camera`` flag
+in the configuration file.
+"""
+
 import shutil
 import time
 import random
