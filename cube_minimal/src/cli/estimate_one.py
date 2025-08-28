@@ -2,7 +2,8 @@
 CLI di esempio che usa l'API ad alto livello.
 Uso:
   python -m cube_minimal.src.cli.estimate_one \
-    --image cube_minimal/img/your_image.tiff \
+    --image example_1.png \
+    --sample-dir cube_minimal/data/sample_dataset \
     --camera cube_minimal/config/calib_data.npz \
     --aruco_dict 4X4_50 \
     --marker_size 0.055 \
@@ -19,6 +20,7 @@ from src.cube_pose.api import estimate_cube_from_image
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--image", required=True)
+    ap.add_argument("--sample-dir", default=None, help="cartella con immagini di esempio")
     ap.add_argument("--camera", required=True)
     ap.add_argument("--aruco_dict", default="4X4_50")
     ap.add_argument("--marker_size", type=float, required=True)
@@ -36,6 +38,7 @@ def main():
         cube_size=args.cube_size,
         pair_strategy=args.pair_strategy,
         return_overlay=bool(args.out or args.show),
+        sample_dir=args.sample_dir,
     )
 
     print(f"markers usati: {result['num_markers']}")
