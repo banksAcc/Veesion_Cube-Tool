@@ -1,4 +1,5 @@
 __pycache__
-dataset/
+dataset/*
+!dataset/README.md
 img_dataset/
 out_diag/
