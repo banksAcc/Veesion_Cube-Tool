@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from capture import CameraCapture, TestCapture
+from capture import CameraCapture, TestCapture, PylonCapture
 
 FMT = "%Y-%m-%d_%H-%M-%S"  # leggibile e ordinabile
 
@@ -32,7 +32,11 @@ class Session:
 
         # capture impl
         if self.use_camera:
-            self.capturer = CameraCapture(self.cfg)
+            cam_type = str(self.cfg["capture"].get("camera_type", "opencv")).lower()
+            if cam_type == "pylon":
+                self.capturer = PylonCapture(self.cfg)
+            else:
+                self.capturer = CameraCapture(self.cfg)
         else:
             self.capturer = TestCapture(self.cfg)
 

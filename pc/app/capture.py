@@ -8,6 +8,11 @@ try:
 except Exception:
     cv2 = None
 
+try:
+    from pypylon import pylon
+except Exception:  # pragma: no cover - optional dependency
+    pylon = None
+
 class BaseCapture:
     def __init__(self, cfg: dict):
         self.cfg = cfg
@@ -72,6 +77,82 @@ class CameraCapture(BaseCapture):
 
         self.cam.release()
         log("[CAPTURE] Camera rilasciata")
+
+
+class PylonCapture(BaseCapture):
+    """Capture backend using Basler's pypylon SDK."""
+
+    def __init__(self, cfg: dict):
+        super().__init__(cfg)
+        self.cam: Optional["pylon.InstantCamera"] = None
+        self.converter: Optional["pylon.ImageFormatConverter"] = None
+
+    def _open_camera(self, log: Callable[[str], None]):
+        if pylon is None:
+            raise RuntimeError("pypylon non disponibile")
+
+        factory = pylon.TlFactory.GetInstance()
+        serial = self.cfg["capture"].get("camera_serial")
+        ip = self.cfg["capture"].get("camera_ip")
+
+        if serial:
+            serial = str(serial)
+            for dev in factory.EnumerateDevices():
+                if dev.GetSerialNumber() == serial:
+                    self.cam = pylon.InstantCamera(factory.CreateDevice(dev))
+                    break
+            if self.cam is None:
+                raise RuntimeError(f"Nessuna camera con serial {serial}")
+        elif ip:
+            di = pylon.DeviceInfo()
+            di.SetIpAddress(str(ip))
+            self.cam = pylon.InstantCamera(factory.CreateDevice(di))
+        else:
+            self.cam = pylon.InstantCamera(factory.CreateFirstDevice())
+
+        self.cam.Open()
+        self.converter = pylon.ImageFormatConverter()
+        self.converter.OutputPixelFormat = pylon.PixelType_BGR8packed
+        self.converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
+
+    def capture_loop(self, dest_dir: Path, freq_ms: int, stop_evt, log: Callable[[str], None]):
+        try:
+            self._open_camera(log)
+        except Exception as e:
+            log(f"[CAPTURE] pylon open failed: {e}")
+            return
+
+        log("[CAPTURE] Pylon camera aperta")
+        self.cam.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
+
+        period = max(0.001, freq_ms / 1000.0)
+        next_t = time.perf_counter()
+        idx = 0
+
+        while not stop_evt.is_set() and self.cam.IsGrabbing():
+            grab = self.cam.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
+            if grab.GrabSucceeded():
+                img = self.converter.Convert(grab)
+                frame = img.GetArray()
+                idx += 1
+                ts = time.strftime("%Y%m%d_%H%M%S")
+                fname = f"frame_{idx:06d}_{ts}.{self.image_format}"
+                try:
+                    self._save_image(frame, dest_dir / fname)
+                except Exception as e:
+                    log(f"[CAPTURE] save error: {e}")
+            else:
+                log("[CAPTURE] grab fallita")
+            grab.Release()
+
+            next_t += period
+            sleep = next_t - time.perf_counter()
+            if sleep > 0:
+                time.sleep(sleep)
+
+        self.cam.StopGrabbing()
+        self.cam.Close()
+        log("[CAPTURE] Pylon camera rilasciata")
 
 class TestCapture(BaseCapture):
     def __init__(self, cfg: dict):

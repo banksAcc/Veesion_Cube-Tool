@@ -117,7 +117,7 @@ py -m venv .venv
 . .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
-> Requisiti principali: `bleak`, `PyYAML`, `opencv-contrib-python`, `numpy`.
+> Requisiti principali: `bleak`, `PyYAML`, `opencv-contrib-python`, `numpy`, `pypylon` (per camere Basler).
 
 ### Configurazione (`config.yaml`)
 Esempio:
@@ -130,8 +130,11 @@ ble:
 capture:
   frequency_ms: 200
   output_root: "captures"
-  use_camera: true
-  camera_id: 0
+  use_camera: true            # false = usa immagini di test da "test_source_dir"
+  camera_type: "opencv"      # "opencv" oppure "pylon" (Basler)
+  camera_id: 0               # solo per camera_type=opencv
+  camera_serial: null        # seriale o IP per camera_type=pylon
+  camera_ip: null
   image_format: "jpg"        # supportati: jpg/png/tif/tiff
   jpeg_quality: 90
   tiff_compression: "lzw"    # opzionale
@@ -173,8 +176,10 @@ runtime:
 - Al **END** la sessione viene messa in coda per la **pose** (in parallelo puoi già iniziare un nuovo `START`).
 
 ### Cattura: Camera reale vs Test mode
-- **Camera reale**: `use_camera: true` → usa `cv2.VideoCapture(camera_id)`.
-- **Test mode**: `use_camera: false` → copia immagini da `test_source_dir` con cadenza `frequency_ms`.  
+- **Camera reale**: `use_camera: true`.
+  - `camera_type: "opencv"` ⇒ backend UVC/OpenCV (`camera_id`).
+  - `camera_type: "pylon"` ⇒ usa **Basler pylon** (`camera_serial` o `camera_ip`).
+- **Test mode**: `use_camera: false` → copia immagini da `test_source_dir` con cadenza `frequency_ms`.
   Se finiscono:
   - `stop_on_test_exhausted: true` ⇒ **termina** la sessione.
   - `false` ⇒ **ricomincia** dall’inizio (ciclo).
