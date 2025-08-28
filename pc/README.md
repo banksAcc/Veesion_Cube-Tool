@@ -127,4 +127,9 @@ Results are written next to the session folder in JSON format. See [`../cube_min
 - Inconsistent state (START/START, END/END) is reported on console but does not stop the pipeline.
 
 ## License
-MIT
+All rights reserved.
+
+This software and all associated files are the exclusive property of <Angelo Milella - COMAU>.
+Unauthorized copying, modification, distribution, or use of this software, via any medium, is strictly prohibited.
+
+For inquiries about licensing, please contact: <angelo_milella_dev@yahoo.com>.

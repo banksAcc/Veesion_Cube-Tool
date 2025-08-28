@@ -68,3 +68,11 @@ python -m cube_minimal.cli.estimate_one   --image cube_minimal/img/your_image.ti
 - Test automatici (unit per `cube_pose`).
 - Ponderazione/robustezza su centro (mediana / pesi ∝ area marker).
 - Metriche di coerenza (angolo tra normali e deviazione riproiezione).
+
+## License
+All rights reserved.
+
+This software and all associated files are the exclusive property of <Angelo Milella - COMAU>.
+Unauthorized copying, modification, distribution, or use of this software, via any medium, is strictly prohibited.
+
+For inquiries about licensing, please contact: <angelo_milella_dev@yahoo.com>.

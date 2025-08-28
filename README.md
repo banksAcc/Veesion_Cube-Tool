@@ -3,6 +3,10 @@
 A compact hardware and software stack for estimating the pose of a 3D‑printed pen tip.  
 An ESP32 inside the pen sends a BLE trigger; the PC listens for the event, grabs a frame from a camera and computes the pen pose from ArUco markers.
 
+## Idea
+<img src="esp32/img/example_nobg_2.png" alt="Device" width="400"/>
+<img src="pc/captures/session_2025-08-28_13-39-13__2025-08-28_13-39-13/img_for_readme.png" alt="Cube After" width="600"/>
+
 ## Hardware
 - ESP32 with BLE and two push buttons
 - 3D‑printed pen body and cube with 3–4 ArUco markers
@@ -45,4 +49,9 @@ Captured frames appear under `pc/captures/` and are processed by the pose worker
 - [`cube_minimal/README.md`](cube_minimal/README.md) – cube pose estimation module
 
 ## License
-MIT
+All rights reserved.
+
+This software and all associated files are the exclusive property of <Angelo Milella - COMAU>.
+Unauthorized copying, modification, distribution, or use of this software, via any medium, is strictly prohibited.
+
+For inquiries about licensing, please contact: <angelo_milella_dev@yahoo.com>.

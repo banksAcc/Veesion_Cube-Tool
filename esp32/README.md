@@ -70,6 +70,9 @@ capture on a PC. It includes user feedback via a common-anode RGB LED and a
 4. Connect with a BLE central to send/receive messages
 
 ## License
+All rights reserved.
 
-MIT License.
+This software and all associated files are the exclusive property of <Angelo Milella - COMAU>.
+Unauthorized copying, modification, distribution, or use of this software, via any medium, is strictly prohibited.
 
+For inquiries about licensing, please contact: <angelo_milella_dev@yahoo.com>.
