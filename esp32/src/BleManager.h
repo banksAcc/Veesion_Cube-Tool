@@ -1,3 +1,11 @@
+/**
+ * @file BleManager.h
+ * @brief Gestione del server BLE basato su NimBLE-Arduino.
+ *
+ * Responsabilità: avvia lo stack BLE, gestisce connessioni e I/O.
+ * Dipendenze: Arduino core, NimBLE-Arduino.
+ */
+
 #pragma once
 #include <Arduino.h>
 #include <NimBLEDevice.h>
@@ -12,18 +20,28 @@ class BleManager {
   using OnDisconnectCB = std::function<void()>;
   using OnRxCB         = std::function<void(const String&)>;
 
+  /// Inizializza lo stack BLE con il nome del dispositivo.
   void begin(const char* name);
+  /// Avvia l'advertising del servizio BLE.
   void startAdvertising();
+  /// Ferma l'advertising del servizio BLE.
   void stopAdvertising();
-  void disconnect();  // disconnette se connesso (usa lastConnHandle_)
+  /// Disconnette il client se connesso (usa lastConnHandle_).
+  void disconnect();
 
+  /// Ritorna true se il BLE è abilitato.
   bool isEnabled()   const { return bleEnabled_; }
+  /// Ritorna true se esiste una connessione attiva.
   bool isConnected() const { return bleConnected_; }
 
+  /// Invia una riga di testo sulla caratteristica di notifica.
   void sendLine(const char* line);
 
+  /// Imposta il callback invocato alla connessione.
   void onConnect(OnConnectCB cb)       { onConn_ = cb; }
+  /// Imposta il callback invocato alla disconnessione.
   void onDisconnect(OnDisconnectCB cb) { onDisc_ = cb; }
+  /// Imposta il callback per i messaggi ricevuti.
   void onRx(OnRxCB cb)                 { onRx_ = cb; }
 
  private:

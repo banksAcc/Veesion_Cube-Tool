@@ -1,3 +1,11 @@
+/**
+ * @file Buttons.h
+ * @brief Gestione di due pulsanti con debounce e long-press.
+ *
+ * Responsabilità: fornisce eventi di pressione breve/lunga.
+ * Dipendenze: Arduino core.
+ */
+
 #pragma once
 #include <Arduino.h>
 
@@ -27,11 +35,14 @@ struct ButtonEvents { bool fell=false; bool rose=false; bool longPress=false; bo
 
 class Buttons {
  public:
+  /// Configura i pin dei pulsanti (pull-up).
   void begin(int pinBle, int pinEvt){
     bBle_.pin = pinBle;  bEvt_.pin = pinEvt;
     pinMode(pinBle, INPUT_PULLUP); pinMode(pinEvt, INPUT_PULLUP);
   }
+  /// Rileva eventi dal pulsante BLE.
   ButtonEvents pollBle(unsigned long longMs){ return poll_(bBle_, longMs); }
+  /// Rileva eventi dal pulsante evento.
   ButtonEvents pollEvt(unsigned long longMs){ return poll_(bEvt_, longMs); }
 
  private:

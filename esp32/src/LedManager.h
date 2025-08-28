@@ -1,3 +1,11 @@
+/**
+ * @file LedManager.h
+ * @brief Controllo del LED RGB con effetti di stato.
+ *
+ * Responsabilità: gestisce colori/animazioni secondo lo stato della penna.
+ * Dipendenze: Arduino core e API LEDC.
+ */
+
 #pragma once
 #include <Arduino.h>
 
@@ -12,8 +20,11 @@ enum class LedState {
 
 class LedManager {
  public:
+  /// Configura pin e PWM per il LED RGB.
   void begin(int pinR, int pinG, int pinB, uint32_t freq, uint8_t res, float brightness, bool commonAnode=true);
+  /// Imposta lo stato logico del LED.
   void setState(LedState s);
+  /// Aggiorna le animazioni del LED in base allo stato corrente.
   void loop();
 
  private:
