@@ -1,10 +1,7 @@
-<<<<<<< HEAD
-"""Manage capture sessions and coordinate start/stop commands."""
-=======
 """Session orchestration and capture strategy selection.
 
 This module exposes :class:`SessionManager`, which reacts to BLE commands and
-starts or stops capture sessions.  Each :class:`Session` chooses a concrete
+starts or stops capture sessions. Each :class:`Session` chooses a concrete
 capture backend according to ``cfg['capture']['use_camera']``:
 
 * ``True`` → :class:`CameraCapture` reads frames from a physical camera (webcam
@@ -15,32 +12,26 @@ capture backend according to ``cfg['capture']['use_camera']``:
 The flag is typically set in ``pc/app/config.yaml`` and allows developers to
 switch between real hardware and test data without code changes.
 """
->>>>>>> main
 
 import asyncio
-import shutil
 import threading
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from capture import CameraCapture, TestCapture
+
+from capture import CameraCapture, TestCapture, PylonCapture
 from logger import get_logger
 
 FMT = "%Y-%m-%d_%H-%M-%S"  # readable and sortable
-<<<<<<< HEAD
-
-class Session:
-    """Represent a single capture session."""
-=======
 
 session_logger = get_logger("SESSION")
 state_logger = get_logger("STATE")
 capture_logger = get_logger("CAPTURE")
 
+
 class Session:
     """Represent a single capture session on disk."""
->>>>>>> main
 
     def __init__(self, root: Path, freq_ms: int, use_camera: bool, cfg: dict):
         """Create a new session and prepare the capture directory.
@@ -60,31 +51,19 @@ class Session:
         self.start_dt = datetime.now()
         self.end_dt: Optional[datetime] = None
 
-<<<<<<< HEAD
-        # initial "ongoing" directory
-=======
         # initial directory "ongoing"
-
->>>>>>> main
         self.dir = root / f"session_{self.start_dt.strftime(FMT)}__ongoing"
         self.dir.mkdir(parents=True, exist_ok=True)
 
         self.stop_evt = threading.Event()
         self.thread: Optional[threading.Thread] = None
 
-<<<<<<< HEAD
-        # per-session log file stored in the same folder
-        self.session_log = self.dir / "session.log"
-        self._log(
-            f"[SESSION] start @ {self.start_dt.isoformat()} freq={self.freq_ms}ms use_camera={self.use_camera}"
-        )
-
-=======
         # simple per-session log file stored in the same folder
         self.session_log = self.dir / "session.log"
-        self._log(f"start @ {self.start_dt.isoformat()} freq={self.freq_ms}ms use_camera={self.use_camera}")
-      
->>>>>>> main
+        self._log(
+            f"start @ {self.start_dt.isoformat()} freq={self.freq_ms}ms use_camera={self.use_camera}"
+        )
+
         # capture implementation
         if self.use_camera:
             cam_type = str(self.cfg["capture"].get("camera_type", "opencv")).lower()
@@ -95,15 +74,8 @@ class Session:
         else:
             self.capturer = TestCapture(self.cfg)
 
-<<<<<<< HEAD
-    def _log(self, msg: str):
-        """Print and append a message to the session log."""
-
-        print(msg)
-=======
     def _log(self, msg: str, level: str = "info"):
         getattr(session_logger, level)(msg)
->>>>>>> main
         try:
             with self.session_log.open("a", encoding="utf-8") as f:
                 f.write(f"[SESSION] {msg}\n")
@@ -119,12 +91,7 @@ class Session:
             pass
 
     def start(self):
-<<<<<<< HEAD
-        """Start the capture loop in a background thread."""
-
-=======
         """Spawn the capture thread."""
->>>>>>> main
         self.thread = threading.Thread(
             target=self.capturer.capture_loop,
             args=(self.dir, self.freq_ms, self.stop_evt, self.log_capture),
@@ -134,26 +101,13 @@ class Session:
         self.thread.start()
 
     def stop(self):
-<<<<<<< HEAD
-        """Stop capture and finalize the session directory.
-
-        Returns:
-            tuple[Path, datetime, datetime]: Final directory and start/end times.
-        """
-
-=======
         """Stop capture and rename directory with start and end timestamps."""
->>>>>>> main
         self.end_dt = datetime.now()
         self._log(f"stop @ {self.end_dt.isoformat()}")
         self.stop_evt.set()
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=5.0)
-<<<<<<< HEAD
-        # rename directory with start__end
-=======
         # rename folder with start__end
->>>>>>> main
         new_name = f"session_{self.start_dt.strftime(FMT)}__{self.end_dt.strftime(FMT)}"
         final_dir = self.root / new_name
         try:
@@ -165,11 +119,7 @@ class Session:
 
 
 class SessionManager:
-<<<<<<< HEAD
-    """Manage session lifecycle and forward jobs to the pose worker."""
-=======
     """Manage capture sessions and queue them for pose estimation."""
->>>>>>> main
 
     def __init__(self, cfg: dict, output_root: Path, pose_queue: asyncio.Queue):
         """Initialize the manager with configuration and queues.
@@ -188,74 +138,32 @@ class SessionManager:
         self.lock = asyncio.Lock()
 
         self.debug = bool(cfg["runtime"].get("debug", True))
-        self.keep_on_error = bool(cfg["capture"].get("keep_session_frames_on_error", True))
+        self.keep_on_error = bool(
+            cfg["capture"].get("keep_session_frames_on_error", True)
+        )
 
     async def handle_start_command(self):
-<<<<<<< HEAD
-        """Begin a new capture session if none is active.
-
-        Side Effects:
-            Creates a :class:`Session`, starts its capture thread and prints
-            status messages.
-        """
-
-        async with self.lock:
-            if self.current is not None:
-                print(
-                    "[STATE] START received but session already active -> IGNORE (duplicate)"
-                )
-=======
         """Handle START messages from BLE by creating a new session."""
         async with self.lock:
             if self.current is not None:
-                state_logger.warning("START received but session already active -> IGNORE (duplicate)")
->>>>>>> main
+                state_logger.warning(
+                    "START received but session already active -> IGNORE (duplicate)"
+                )
                 return
             simulate = bool(self.cfg["capture"].get("simulate_camera", False))
             use_camera = not simulate
             freq_ms = int(self.cfg["capture"].get("frequency_ms", 200))
             self.current = Session(self.output_root, freq_ms, use_camera, self.cfg)
             self.current.start()
-<<<<<<< HEAD
-            print("[STATE] Capture session STARTED")
-
-    async def handle_end_command(self):
-        """End the current session if one is running.
-
-        Side Effects:
-            Stops the active :class:`Session`, queues it for pose estimation and
-            prints status messages.
-        """
-
-        async with self.lock:
-            if self.current is None:
-                print(
-                    "[STATE] END received but no active session -> IGNORE (duplicate)"
-                )
-                return
-            await self._stop_and_queue(self.current)
-            self.current = None
-            print("[STATE] Capture session STOPPED and queued for pose")
-
-    async def stop_session(self, reason: str = ""):
-        """Force-stop the current session and queue it for processing.
-
-        Args:
-            reason (str): Text describing why the session is being stopped.
-
-        Side Effects:
-            Stops the session, enqueues it for pose estimation and prints
-            status messages.
-        """
-
-=======
             state_logger.info("Capture session STARTED")
-  
+
     async def handle_end_command(self):
         """Handle END messages by closing the current session."""
         async with self.lock:
             if self.current is None:
-                state_logger.warning("END received but no active session -> IGNORE (duplicate)")
+                state_logger.warning(
+                    "END received but no active session -> IGNORE (duplicate)"
+                )
                 return
             await self._stop_and_queue(self.current)
             self.current = None
@@ -263,7 +171,6 @@ class SessionManager:
 
     async def stop_session(self, reason: str = ""):
         """Force stop of the active session, providing a reason."""
->>>>>>> main
         async with self.lock:
             if self.current is None:
                 return
@@ -272,32 +179,15 @@ class SessionManager:
             self.current = None
 
     async def _stop_and_queue(self, session: Session):
-<<<<<<< HEAD
-        """Stop a session and enqueue it for pose estimation.
-
-        Args:
-            session (Session): Session instance to be stopped.
-
-        Side Effects:
-            May remove captured frames and always enqueues a job for the pose
-            worker if enabled.
-        """
-
-=======
         """Stop the session and enqueue it for pose estimation."""
->>>>>>> main
         try:
             final_dir, start_dt, end_dt = session.stop()
         except Exception as e:
             session_logger.error(f"stop error: {e}")
             if not self.keep_on_error:
-<<<<<<< HEAD
-                print(
-                    "[SESSION] WARNING: keep_on_error=False but stop failed: NOT removing anything."
+                session_logger.warning(
+                    "keep_on_error=False but stop failed: NOT removing anything."
                 )
-=======
-                session_logger.warning("keep_on_error=False but stop failed: NOT removing anything.")
->>>>>>> main
             return
 
         # enqueue job for pose estimation
@@ -311,14 +201,5 @@ class SessionManager:
             await self.pose_queue.put(job)
 
     async def shutdown(self):
-<<<<<<< HEAD
-        """Stop any active session as part of application shutdown.
-
-        Side Effects:
-            Stops an ongoing session and prints status messages.
-        """
-
-=======
         """Stop current session when shutting down."""
->>>>>>> main
         await self.stop_session(reason="shutdown")
