@@ -94,11 +94,19 @@ aru-pen-pose/
 ├─ stl/
 │  ├─ cube_mount.stl
 │  └─ pen_body.stl
+├─ dataset/
+│  └─ README.md
 ├─ docs/
 │  ├─ aruco_layout.pdf
 │  └─ protocol_ble.md
 └─ README.md
 ```
+
+---
+
+## 📚 Dataset
+
+I dataset utilizzati per la calibrazione o per l'addestramento non sono inclusi nel repository. Scaricali dalle fonti indicate nei rilasci del progetto e posizionali nella cartella `dataset/`. Consulta `dataset/README.md` per dettagli sul formato (immagini, file `.npz`).
 
 ---
 
