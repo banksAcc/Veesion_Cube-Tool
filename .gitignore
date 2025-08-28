@@ -130,5 +130,5 @@ cython_debug/
 # PyCharm
 .idea/
 
-# Dataset
+# Dataset & Captures
 dataset

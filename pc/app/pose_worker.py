@@ -2,7 +2,7 @@ import asyncio
 import json
 import shutil
 from pathlib import Path
-from cube_minimal.cube_minimal.cube_pose.api import estimate_cube_from_image
+from cube_minimal.cube_pose.api import estimate_cube_from_image
 
 try:
     import cv2
