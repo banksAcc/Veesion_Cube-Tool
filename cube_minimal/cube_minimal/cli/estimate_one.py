@@ -1,21 +1,23 @@
-"""
-CLI di esempio che usa l'API ad alto livello.
-Uso:
-  python -m cube_minimal.src.cli.estimate_one \
-    --image example_1.png \
-    --sample-dir cube_minimal/data/sample_dataset \
+"""Example CLI using the high level API.
+
+Usage
+-----
+```
+python -m cube_minimal.cli.estimate_one \
+    --image cube_minimal/img/your_image.tiff \
     --camera cube_minimal/config/calib_data.npz \
     --aruco_dict 4X4_50 \
     --marker_size 0.055 \
     --cube_size 0.060 \
     --pair_strategy first \
     --out overlay.png
+```
 """
 
 import argparse
 import cv2 as cv
 
-from src.cube_pose.api import estimate_cube_from_image
+from cube_minimal.cube_pose.api import estimate_cube_from_image
 
 def main():
     ap = argparse.ArgumentParser()
@@ -26,7 +28,7 @@ def main():
     ap.add_argument("--marker_size", type=float, required=True)
     ap.add_argument("--cube_size", type=float, required=True)
     ap.add_argument("--pair_strategy", choices=["first","max_angle"], default="first")
-    ap.add_argument("--out", default=None, help="salva overlay (opzionale)")
+    ap.add_argument("--out", default=None, help="save overlay (optional)")
     ap.add_argument("--show", action="store_true")
     args = ap.parse_args()
 
@@ -41,7 +43,7 @@ def main():
         sample_dir=args.sample_dir,
     )
 
-    print(f"markers usati: {result['num_markers']}")
+    print(f"markers used: {result['num_markers']}")
     print(f"tvec (m): {result['tvec']}")
     print(f"rvec (Rodrigues): {result['rvec'].reshape(-1)}")
     print(f"quat (w,x,y,z): {result['quat']}")

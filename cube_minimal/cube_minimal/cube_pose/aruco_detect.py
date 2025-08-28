@@ -1,9 +1,11 @@
+"""Utilities for detecting ArUco markers in an image."""
+
 from dataclasses import dataclass
 from typing import List, Tuple
 import numpy as np
 import cv2 as cv
 
-# Mappa dei dizionari supportati
+# Supported dictionary names
 DICT_MAP = {
     "4X4_50": cv.aruco.DICT_4X4_50,
     "4X4_100": cv.aruco.DICT_4X4_100,
@@ -15,22 +17,37 @@ DICT_MAP = {
 
 @dataclass
 class MarkerDetection:
-    """Rilevazione base di un marker."""
+    """Basic detection result for a marker."""
+
     id: int
-    corners: np.ndarray  # (4,2) float32, ordine: tl, tr, br, bl
+    corners: np.ndarray  # (4,2) float32, order: tl, tr, br, bl
+
 
 def make_detector(dict_name: str) -> cv.aruco.ArucoDetector:
-    """Crea un ArUco detector dal nome dizionario."""
+    """Create an ArUco detector from the dictionary name."""
+
     d = cv.aruco.getPredefinedDictionary(DICT_MAP[dict_name])
     p = cv.aruco.DetectorParameters()
     return cv.aruco.ArucoDetector(d, p)
 
+
 def detect_markers(img_bgr: np.ndarray, dict_name: str) -> List[MarkerDetection]:
+    """Run ArUco detection on a BGR image.
+
+    Returns
+    -------
+    List[MarkerDetection]
+        Marker detections in detection order.
+
+    Example
+    -------
+    ```python
+    img = cv.imread("frame.png")
+    detections = detect_markers(img, "4X4_50")
+    print([m.id for m in detections])
+    ```
     """
-    Esegue la detection ArUco sull'immagine BGR.
-    Returns:
-        Lista di MarkerDetection in ordine di rilevazione.
-    """
+
     det = make_detector(dict_name)
     gray = cv.cvtColor(img_bgr, cv.COLOR_BGR2GRAY)
     corners, ids, _ = det.detectMarkers(gray)

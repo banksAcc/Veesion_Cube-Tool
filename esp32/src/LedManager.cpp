@@ -1,3 +1,11 @@
+/**
+ * @file LedManager.cpp
+ * @brief Implementazione degli effetti LED RGB della penna.
+ *
+ * Responsabilità: applica colori e animazioni in base allo stato.
+ * Dipendenze: Arduino core e API LEDC.
+ */
+
 #include <Arduino.h>
 #include "LedManager.h"
 

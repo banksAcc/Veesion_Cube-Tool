@@ -5,24 +5,31 @@ import cv2 as cv
 
 from .marker_pose import MarkerPose
 
+
 @dataclass
 class CubePose:
-    """Posa del cubo nel frame camera."""
+    """Pose of the cube in the camera frame."""
+
     R: np.ndarray      # (3,3)
     t: np.ndarray      # (3,)
     rvec: np.ndarray   # (3,1) Rodrigues
     quat: np.ndarray   # (4,) (w,x,y,z)
 
+
 def _center_from_marker(Rm: np.ndarray, t_marker_cam: np.ndarray, cube_size: float) -> np.ndarray:
+    """Cube centre estimated from a single marker.
+
+    The marker's Z-axis (blue) points out of the plane so the cube centre is
+    ``t - Z * L/2``.
     """
-    Centro cubo stimato da un singolo marker:
-    Z_marker (blu) esce dal piano → centro = t - Z * L/2
-    """
+
     z_marker_cam = Rm[:, 2]
     return t_marker_cam - z_marker_cam * (cube_size * 0.5)
 
+
 def _quat_from_R(R: np.ndarray) -> np.ndarray:
-    """Converte matrice di rotazione in quaternion (w,x,y,z)."""
+    """Convert rotation matrix to quaternion ``(w, x, y, z)``."""
+
     t = np.trace(R)
     if t > 0:
         S = np.sqrt(t + 1.0) * 2.0
@@ -47,39 +54,59 @@ def _quat_from_R(R: np.ndarray) -> np.ndarray:
     q = np.array([w,x,y,z], dtype=float)
     return q / (np.linalg.norm(q) + 1e-12)
 
+
 def estimate_cube_pose(marker_poses: List[MarkerPose], cube_size: float,
                        pair_strategy: str = "first") -> CubePose:
+    """Estimate cube pose ``(R, t)`` from the visible marker poses.
+
+    Orientation strategy
+    --------------------
+    - If ``>= 2`` markers: align two cube faces to two markers:
+        ``Z_cube = -Z_marker_1``
+        ``X_cube`` is the projection of ``(-Z_marker_2)`` onto the plane orthogonal
+        to ``Z_cube``
+        ``Y_cube = Z × X``
+      If ``pair_strategy == "max_angle"`` the pair with the most orthogonal
+      normals is used.
+    - If only one marker: use ``-Z_marker`` for ``Z_cube`` and derive ``X/Y`` from
+      the plane of that face.
+
+    Centre
+    ------
+    Mean of the centres estimated from single markers: ``t_i - Z_i * L/2``.
+
+    Returns
+    -------
+    CubePose
+        ``CubePose(R, t, rvec, quat)``
+
+    Raises
+    ------
+    ValueError
+        If no marker poses are provided.
+
+    Example
+    -------
+    ```python
+    cube = estimate_cube_pose(poses, 0.06)
+    print(cube.t)
+    ```
     """
-    Stima la posa del cubo (R, t) a partire dalle pose dei marker visibili.
 
-    Strategia orientamento:
-      - Se >=2 marker: allinea due facce del cubo a due marker:
-            Z_cubo = -Z_marker_1
-            X_cubo = proiezione di (-Z_marker_2) sul piano ortogonale a Z_cubo
-            Y_cubo = Z × X
-        Se pair_strategy == "max_angle" sceglie la coppia con normali più ortogonali.
-      - Se 1 marker: usa -Z_marker per Z_cubo e X/Y dal piano della stessa faccia.
-
-    Centro:
-      - Media dei centri stimati dai singoli marker: (t_i - Z_i * L/2)
-
-    Returns:
-        CubePose(R, t, rvec, quat)
-    """
     if len(marker_poses) == 0:
-        raise ValueError("Nessun marker per stimare la posa del cubo.")
+        raise ValueError("No markers to estimate cube pose.")
 
-    # centro: media dei centri per marker
+    # centre: mean of centres from markers
     centers = []
     for m in marker_poses:
         centers.append(_center_from_marker(m.R, m.tvec.reshape(3,), cube_size))
     t_cube = np.mean(np.vstack(centers), axis=0)  # (3,)
 
-    # orientamento
+    # orientation
     if len(marker_poses) >= 2:
-        # scelta coppia
+        # choose pair
         if pair_strategy == "max_angle":
-            # massimizza l'angolo tra normali
+            # maximise angle between normals
             z_list = [m.R[:,2] for m in marker_poses]
             best = (0, 1, -1.0)  # i,j,score
             for i in range(len(z_list)):
@@ -89,7 +116,7 @@ def estimate_cube_pose(marker_poses: List[MarkerPose], cube_size: float,
                         best = (i, j, score)
             i, j = best[0], best[1]
         else:
-            i, j = 0, 1  # primi due (policy richiesta)
+            i, j = 0, 1  # first two
 
         z1 = marker_poses[i].R[:,2]
         z2 = marker_poses[j].R[:,2]
@@ -99,7 +126,7 @@ def estimate_cube_pose(marker_poses: List[MarkerPose], cube_size: float,
         v = -z2
         Xc = v - np.dot(v, Zc) * Zc
         if np.linalg.norm(Xc) < 1e-6:
-            # fallback: usa X del primo marker proiettata
+            # fallback: use projected X of first marker
             x_ref = marker_poses[i].R[:,0]
             Xc = x_ref - np.dot(x_ref, Zc) * Zc
 
@@ -110,7 +137,7 @@ def estimate_cube_pose(marker_poses: List[MarkerPose], cube_size: float,
         R_cube = np.column_stack([Xc, Yc, Zc])
 
     else:
-        # 1 solo marker
+        # single marker
         R_ref = marker_poses[0].R
         Zc = -R_ref[:,2]
         Zc /= (np.linalg.norm(Zc) + 1e-12)

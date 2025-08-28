@@ -15,6 +15,22 @@ Il PC, alla ricezione dell’input, scatta la foto (es. da camera industriale ti
 
 ---
 
+## Installazione
+
+Per installare i moduli Python localmente:
+
+```bash
+pip install .
+```
+
+Oppure, dopo la pubblicazione su PyPI:
+
+```bash
+pip install cube-minimal
+```
+
+---
+
 ## 🧱 Architettura
 
 1. **Utente preme un tasto** sulla penna (ESP32).
@@ -62,12 +78,19 @@ Il PC, alla ricezione dell’input, scatta la foto (es. da camera industriale ti
 
 ## 🛠️ Software stack
 
-- **Firmware ESP32 (Arduino/ESP‑IDF)**: BLE GATT, gestione pulsanti, battery-awareness.  
+- **Firmware ESP32 (Arduino/ESP‑IDF)**: BLE GATT, gestione pulsanti, battery-awareness.
 - **PC App (Python)**:
   - **OpenCV** (ArUco, Charuco, solvePnP).
   - **Bleak** (BLE cross‑platform).
   - **Acquisizione camera**: OpenCV/SDK vendor.
   - CLI + opzione GUI minimale (in roadmap).
+
+## 👨‍💻 Classi firmware ESP32
+
+- `BleManager` – wrapper su NimBLE-Arduino per advertising, connessione e scambio messaggi.
+- `DisplayManager` – gestisce il display SSD1306 (stati, animazioni).
+- `LedManager` – controlla il LED RGB e i suoi effetti.
+- `Buttons` – debounce e rilevamento pressioni brevi/lunghe.
 
 ---
 
@@ -94,11 +117,19 @@ aru-pen-pose/
 ├─ stl/
 │  ├─ cube_mount.stl
 │  └─ pen_body.stl
+├─ dataset/
+│  └─ README.md
 ├─ docs/
 │  ├─ aruco_layout.pdf
 │  └─ protocol_ble.md
 └─ README.md
 ```
+
+---
+
+## 📚 Dataset
+
+I dataset utilizzati per la calibrazione o per l'addestramento non sono inclusi nel repository. Scaricali dalle fonti indicate nei rilasci del progetto e posizionali nella cartella `dataset/`. Consulta `dataset/README.md` per dettagli sul formato (immagini, file `.npz`).
 
 ---
 
@@ -176,8 +207,16 @@ python app/main.py   --ble-name ARU-PEN   --camera 0   --dict DICT_4X4_50   --ma
 ## 🧪 Test & Debug
 
 - **Modalità test** senza BLE: `--test-mode` → scatti manuali (tasto o timer).  
-- **Overlay**: disegna assi, ID marker, reprojection error medio.  
+- **Overlay**: disegna assi, ID marker, reprojection error medio.
 - **Log**: CSV con posa e residui PnP.
+
+### Esecuzione dei test
+
+I test unitari sono gestiti con `pytest`:
+
+```bash
+pytest
+```
 
 ---
 
