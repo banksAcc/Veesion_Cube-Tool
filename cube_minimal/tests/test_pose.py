@@ -1,15 +1,9 @@
-import sys
-from pathlib import Path
-
 import numpy as np
 import cv2 as cv
 
-# Make cube_minimal/src importable
-sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
-
-from cube_pose.aruco_detect import MarkerDetection
-from cube_pose.marker_pose import estimate_marker_poses, MarkerPose
-from cube_pose.cube_pose import estimate_cube_pose
+from cube_minimal.cube_pose.aruco_detect import MarkerDetection
+from cube_minimal.cube_pose.marker_pose import MarkerPose, estimate_marker_poses
+from cube_minimal.cube_pose.cube_pose import estimate_cube_pose
 
 
 def test_estimate_marker_poses_identity():
