@@ -18,25 +18,9 @@ except Exception:
 log = get_logger("POSE")
 
 class PoseWorker:
-<<<<<<< HEAD
-    """Background worker responsible for pose estimation."""
-
-    def __init__(
-        self, cfg: dict, output_root: Path, ble_queue: asyncio.Queue[str]
-    ):
-        """Initialize the worker with configuration and queues.
-
-        Args:
-            cfg (dict): Application configuration.
-            output_root (Path): Directory for output artifacts.
-            ble_queue (asyncio.Queue[str]): Queue for BLE status messages.
-        """
-
-=======
     """Asynchronous worker that estimates cube pose for capture sessions."""
 
     def __init__(self, cfg: dict, output_root: Path, ble_queue: asyncio.Queue[str]):
->>>>>>> main
         self.cfg = cfg
         self.output_root = output_root
         self.queue: asyncio.Queue = asyncio.Queue()
@@ -50,53 +34,23 @@ class PoseWorker:
             self.loop = asyncio.get_event_loop()
 
     async def start(self):
-<<<<<<< HEAD
-        """Launch worker tasks if pose estimation is enabled.
-
-        Side Effects:
-            Creates background asyncio tasks and prints status messages.
-        """
-
-        if not self.enabled:
-            print("[POSE] disabled")
-=======
         """Spawn worker tasks if pose estimation is enabled."""
         if not self.enabled:
             log.info("disabled")
->>>>>>> main
             return
         log.info(f"starting workers = {self.max_jobs}")
         for _ in range(self.max_jobs):
             self.tasks.append(asyncio.create_task(self._worker()))
 
     async def stop(self):
-<<<<<<< HEAD
-        """Signal workers to exit and wait for their completion.
-
-        Side Effects:
-            Cancels background tasks and empties the job queue.
-        """
-
-=======
         """Signal workers to exit and wait for completion."""
->>>>>>> main
         for _ in self.tasks:
             await self.queue.put(None)
         await asyncio.gather(*self.tasks, return_exceptions=True)
         self.tasks.clear()
 
     async def _worker(self):
-<<<<<<< HEAD
-        """Worker coroutine consuming session jobs from the queue.
-
-        Side Effects:
-            Removes jobs from the queue and processes them in background
-            threads.
-        """
-
-=======
         """Consume jobs from the queue and process sessions in threads."""
->>>>>>> main
         while True:
             job = await self.queue.get()
             if job is None:
@@ -107,21 +61,7 @@ class PoseWorker:
                 log.error(f"job error: {e}")
 
     def _process_session(self, job: dict):
-<<<<<<< HEAD
-        """Process a single capture session.
-
-        Args:
-            job (dict): Dictionary describing the session with keys ``session_dir``,
-                ``start``, ``end`` and ``freq_ms``.
-
-        Side Effects:
-            Writes a JSON result file, may delete frame images and notifies the
-            BLE client about computation start and end.
-        """
-
-=======
         """Process a completed capture session and write results to JSON."""
->>>>>>> main
         session_dir = Path(job["session_dir"])
         start_iso = job["start"]
         end_iso = job["end"]
@@ -171,43 +111,18 @@ class PoseWorker:
             if delete_frames and not debug:
                 try:
                     shutil.rmtree(session_dir)
-<<<<<<< HEAD
-                    print(f"[POSE] {session_dir.name} removed (frames deleted)")
-=======
                     log.info(f"{session_dir.name} deleted (frames removed)")
->>>>>>> main
                 except Exception as e:
                     log.error(f"rmtree error: {e}")
             else:
-<<<<<<< HEAD
-                print(
-                    f"[POSE] frames kept (delete_frames={delete_frames}, debug={debug})"
-                )
-=======
                 log.info(f"frames kept (delete_frames={delete_frames}, debug={debug})")
->>>>>>> main
         finally:
             asyncio.run_coroutine_threadsafe(
                 self.ble_queue.put("COMPUTATION END"), self.loop
             )
 
     def _pose_charuco(self, frames: list[Path]) -> list[dict]:
-<<<<<<< HEAD
-        """Estimate pose using ChArUco markers for provided frames.
-
-        Args:
-            frames (list[Path]): Image paths to analyze.
-
-        Returns:
-            list[dict]: Pose estimation results for each frame.
-
-        Side Effects:
-            May overwrite frame files with overlay images.
-        """
-
-=======
         """Estimate pose using ArUco cube markers for each frame."""
->>>>>>> main
         res = []
         pose_cfg = self.cfg["pose"]["cube"]
         dict_name = pose_cfg.get("dictionary", "4X4_50")
