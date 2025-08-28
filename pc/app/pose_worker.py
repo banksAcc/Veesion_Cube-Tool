@@ -12,13 +12,18 @@ except Exception:
     cv2, np, HAS_CV = None, None, False
 
 class PoseWorker:
-    def __init__(self, cfg: dict, output_root: Path):
+    def __init__(self, cfg: dict, output_root: Path, ble_queue: asyncio.Queue[str]):
         self.cfg = cfg
         self.output_root = output_root
         self.queue: asyncio.Queue = asyncio.Queue()
         self.tasks: list[asyncio.Task] = []
         self.max_jobs = int(cfg["pose"].get("max_parallel_jobs", 1))
         self.enabled = bool(cfg["pose"].get("enabled", True))
+        self.ble_queue = ble_queue
+        try:
+            self.loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self.loop = asyncio.get_event_loop()
 
     async def start(self):
         if not self.enabled:
@@ -55,42 +60,52 @@ class PoseWorker:
 
         print(f"[POSE] Processing {session_dir.name} with method={method}")
 
-        frames = sorted([p for p in session_dir.glob("*") if p.suffix.lower() in (".jpg",".jpeg",".png",".tif",".tiff")])
-        results = {
-            "session": session_dir.name,
-            "start": start_iso,
-            "end": end_iso,
-            "frequency_ms": freq_ms,
-            "method": method,
-            "frames": [],
-        }
+        asyncio.run_coroutine_threadsafe(
+            self.ble_queue.put("COMPUTATION START"), self.loop
+        )
+        try:
+            frames = sorted(
+                [p for p in session_dir.glob("*") if p.suffix.lower() in (".jpg",".jpeg",".png",".tif",".tiff")]
+            )
+            results = {
+                "session": session_dir.name,
+                "start": start_iso,
+                "end": end_iso,
+                "frequency_ms": freq_ms,
+                "method": method,
+                "frames": [],
+            }
 
-        if method == "charuco" and HAS_CV and hasattr(cv2, "aruco"):
-            results["frames"] = self._pose_charuco(frames)
-        elif method == "custom":
-            for p in frames:
-                results["frames"].append({
-                    "file": p.name, "ok": False, "reason": "custom_not_implemented"
-                })
-        else:
-            reason = "missing_opencv_contrib_or_invalid_method"
-            for p in frames:
-                results["frames"].append({"file": p.name, "ok": False, "reason": reason})
+            if method == "charuco" and HAS_CV and hasattr(cv2, "aruco"):
+                results["frames"] = self._pose_charuco(frames)
+            elif method == "custom":
+                for p in frames:
+                    results["frames"].append({
+                        "file": p.name, "ok": False, "reason": "custom_not_implemented"
+                    })
+            else:
+                reason = "missing_opencv_contrib_or_invalid_method"
+                for p in frames:
+                    results["frames"].append({"file": p.name, "ok": False, "reason": reason})
 
-        with out_json.open("w", encoding="utf-8") as f:
-            json.dump(results, f, indent=2)
+            with out_json.open("w", encoding="utf-8") as f:
+                json.dump(results, f, indent=2)
 
-        # cleanup
-        delete_frames = bool(self.cfg["pose"].get("delete_frames_after_processing", True))
-        debug = bool(self.cfg["runtime"].get("debug", True))
-        if delete_frames and not debug:
-            try:
-                shutil.rmtree(session_dir)
-                print(f"[POSE] {session_dir.name} eliminata (frames rimossi)")
-            except Exception as e:
-                print(f"[POSE] rmtree error: {e}")
-        else:
-            print(f"[POSE] frames conservati (delete_frames={delete_frames}, debug={debug})")
+            # cleanup
+            delete_frames = bool(self.cfg["pose"].get("delete_frames_after_processing", True))
+            debug = bool(self.cfg["runtime"].get("debug", True))
+            if delete_frames and not debug:
+                try:
+                    shutil.rmtree(session_dir)
+                    print(f"[POSE] {session_dir.name} eliminata (frames rimossi)")
+                except Exception as e:
+                    print(f"[POSE] rmtree error: {e}")
+            else:
+                print(f"[POSE] frames conservati (delete_frames={delete_frames}, debug={debug})")
+        finally:
+            asyncio.run_coroutine_threadsafe(
+                self.ble_queue.put("COMPUTATION END"), self.loop
+            )
 
     def _pose_charuco(self, frames: list[Path]) -> list[dict]:
         res = []

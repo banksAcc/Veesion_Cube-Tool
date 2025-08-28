@@ -20,7 +20,7 @@ async def _discover_address(cfg: dict) -> str | None:
     print("[BLE] Nessun device trovato.")
     return None
 
-async def run_ble_client(cfg: dict, session_mgr):
+async def run_ble_client(cfg: dict, session_mgr, out_queue: asyncio.Queue[str]):
     address = await _discover_address(cfg)
     if not address:
         print("[BLE] Nessun indirizzo: esco.")
@@ -28,6 +28,8 @@ async def run_ble_client(cfg: dict, session_mgr):
 
     # UUID NUS TX (notifiche dal device verso PC)
     NUS_TX_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
+    # UUID NUS RX (messaggi dal PC verso device)
+    NUS_RX_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 
     async def on_notify(_handle, data: bytearray):
         msg = data.decode(errors="ignore").strip().upper()
@@ -49,9 +51,27 @@ async def run_ble_client(cfg: dict, session_mgr):
                 await client.start_notify(NUS_TX_UUID, on_notify)
                 print("[BLE] Sottoscritto alle notifiche. (CTRL+C per uscire)")
 
+                async def send_queued():
+                    while True:
+                        msg = await out_queue.get()
+                        if msg is None:
+                            break
+                        try:
+                            await client.write_gatt_char(NUS_RX_UUID, msg.encode())
+                        except Exception as e:
+                            print(f"[BLE] send error: {e}")
+
+                sender_task = asyncio.create_task(send_queued())
+
                 # Mantieni viva la connessione; se cade → stop capture se richiesto
                 while client.is_connected:
                     await asyncio.sleep(0.5)
+
+                sender_task.cancel()
+                try:
+                    await sender_task
+                except asyncio.CancelledError:
+                    pass
 
                 print("[BLE] Disconnesso.")
                 if cfg["capture"].get("stop_on_ble_disconnect", True):

@@ -21,8 +21,11 @@ async def main():
     output_root = Path(cfg["capture"]["output_root"])
     output_root.mkdir(parents=True, exist_ok=True)
 
+    # Coda per messaggi BLE in uscita
+    ble_queue: asyncio.Queue[str] = asyncio.Queue()
+
     # Avvia worker asincrono per la posa
-    pose_worker = PoseWorker(cfg, output_root)
+    pose_worker = PoseWorker(cfg, output_root, ble_queue)
     await pose_worker.start()
 
     # Gestore sessioni (scatti) con riferimento al worker
@@ -30,7 +33,7 @@ async def main():
 
     # Avvia BLE client (blocking finché non interrompi)
     try:
-        await run_ble_client(cfg, session_mgr)
+        await run_ble_client(cfg, session_mgr, ble_queue)
     finally:
         # Chiusura pulita
         await session_mgr.shutdown()
