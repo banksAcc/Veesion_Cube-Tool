@@ -9,8 +9,8 @@ capture:
   simulate_camera: true            # true = test mode (uses images from a folder)
   camera_type: "webcam"            # "webcam", "ip", etc.
   camera_id: 0                     # webcam id (0 usually works)
-  camera_serial: null              # serial number for industrial cameras
-  camera_ip: null                  # URL/IP for network cameras
+  camera_serial: 23324651          # serial number for industrial cameras
+  camera_ip: 192.168.1.165         # URL/IP for network cameras
   image_format: "tiff"             # "jpg" or "png"
   jpeg_quality: 90
   tiff_compression: "lzw"          # none | lzw | deflate | packbits
