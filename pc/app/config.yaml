@@ -18,7 +18,6 @@ capture:
   stop_on_test_exhausted: false    # if true, end session when images finish
   stop_on_ble_disconnect: true     # auto stop capture if BLE disconnects
   keep_session_frames_on_error: true # if stop/rename fails, keep session frames
-
 pose:
   enabled: true
   method: "charuco"                # "charuco" | "custom"
