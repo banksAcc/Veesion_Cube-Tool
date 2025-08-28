@@ -1,76 +1,85 @@
-# ble_listener.py
+"""Simple BLE listener for deprecated ESP32 firmware example."""
+
 # pip install bleak
 import asyncio
 import argparse
 import sys
 from bleak import BleakClient, BleakScanner
 
-# Su Windows alcune versioni di Python/bleak preferiscono il WindowsSelectorEventLoop
+# On Windows some Python/bleak versions require WindowsSelectorEventLoop
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-# Nordic UART Service (NUS) - TX UUID: notifiche dal device verso PC
+# Nordic UART Service (NUS) - TX UUID: notifications from device to PC
 NUS_TX_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
+
 async def find_device(name_prefix: str | None, address: str | None, scan_timeout: float = 6.0):
+    """Return the BLE address for a device matching the given filters."""
     if address:
         return address
-    print(f"[SCAN] Scansione BLE per {scan_timeout:.1f}s...")
+    print(f"[SCAN] BLE scan for {scan_timeout:.1f}s...")
     devices = await BleakScanner.discover(timeout=scan_timeout)
     for d in devices:
         if name_prefix and d.name and d.name.startswith(name_prefix):
-            print(f"[SCAN] Trovato: {d.name} @ {d.address}")
+            print(f"[SCAN] Found: {d.name} @ {d.address}")
             return d.address
-    print("[SCAN] Nessun device compatibile trovato.")
+    print("[SCAN] No compatible device found.")
     return None
 
+
 async def listen_notifications(address: str):
+    """Connect to the given address and print incoming notifications."""
+
     async def on_notify(_handle, data: bytearray):
         msg = data.decode(errors="ignore").strip()
         print(f"[RX] {msg}")
 
     while True:
         try:
-            print(f"[BLE] Connessione a {address} ...")
+            print(f"[BLE] Connecting to {address} ...")
             async with BleakClient(address, timeout=10.0) as client:
                 ok = client.is_connected
-                print(f"[BLE] Connesso: {ok}")
+                print(f"[BLE] Connected: {ok}")
                 if not ok:
-                    raise RuntimeError("Connessione fallita")
+                    raise RuntimeError("Connection failed")
 
                 await client.start_notify(NUS_TX_UUID, on_notify)
-                print("[BLE] In ascolto notifiche su NUS/TX. (CTRL+C per uscire)")
+                print("[BLE] Listening for notifications on NUS/TX. (CTRL+C to exit)")
 
                 while client.is_connected:
                     await asyncio.sleep(1.0)
 
-                print("[BLE] Disconnesso dal device.")
+                print("[BLE] Disconnected from device.")
 
         except KeyboardInterrupt:
-            print("\n[BLE] Interrotto dall’utente.")
+            print("\n[BLE] Interrupted by user.")
             return
         except Exception as e:
-            print(f"[BLE] Errore: {e}")
+            print(f"[BLE] Error: {e}")
 
-        print("[BLE] Riprovo tra 2 secondi...")
+        print("[BLE] Retrying in 2 seconds...")
         await asyncio.sleep(2.0)
 
+
 async def main():
-    parser = argparse.ArgumentParser(description="Ascolta notifiche BLE dall'ESP32 (START/END).")
-    parser.add_argument("--name", default="ESP32-RGB-BLE", help="Prefisso del nome del device (default: ESP32-RGB-BLE)")
-    parser.add_argument("--addr", default=None, help="Indirizzo del device (MAC su Linux/Android, GUID su Windows)")
-    parser.add_argument("--scan", type=float, default=6.0, help="Durata scansione in secondi (default: 6.0)")
+    """CLI entry point for the BLE notification listener."""
+    parser = argparse.ArgumentParser(description="Listen to BLE notifications from an ESP32 (START/END).")
+    parser.add_argument("--name", default="ESP32-RGB-BLE", help="Device name prefix (default: ESP32-RGB-BLE)")
+    parser.add_argument("--addr", default=None, help="Device address (MAC on Linux/Android, GUID on Windows)")
+    parser.add_argument("--scan", type=float, default=6.0, help="Scan duration in seconds (default: 6.0)")
     args = parser.parse_args()
 
     address = await find_device(args.name, args.addr, scan_timeout=args.scan)
     if not address:
-        print("Suggerimenti:")
-        print("- Premi a lungo il tasto BLE sull'ESP32 per entrare in advertising (LED blu 'breathing').")
-        print("- Assicurati che il PC abbia il BLE attivo/supportato.")
-        print("- Prova ad aumentare la durata di scansione con --scan 10")
+        print("Tips:")
+        print("- Hold the BLE button on the ESP32 to enter advertising (blue 'breathing' LED).")
+        print("- Ensure the PC has BLE enabled/supported.")
+        print("- Try increasing scan duration with --scan 10")
         return
 
     await listen_notifications(address)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

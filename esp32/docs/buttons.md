@@ -1,13 +1,13 @@
-# Gestione pulsanti
+# Button Handling
 
-Il file `Buttons.h` implementa il modello di eventi dei pulsanti:
+`Buttons.h` implements a simple event model for button presses:
 
-- `fell` – transizione HIGH→LOW (pressione).
-- `rose` – transizione LOW→HIGH (rilascio).
-- `longPress` – generato quando il pulsante resta premuto per almeno `longMs` ms.
-- `isDown` – stato corrente del pulsante (LOW quando premuto).
+- `fell` – HIGH→LOW transition (button pressed)
+- `rose` – LOW→HIGH transition (button released)
+- `longPress` – emitted once when the button stays pressed for `longMs`
+- `isDown` – current state (LOW when pressed)
 
-Esempio con `longMs = 500`:
+Example with `longMs = 500`:
 
 ```
 time (ms): 0    50   550   800
@@ -15,5 +15,6 @@ level    : HIGH \____LOW____/ HIGH
               fell longPress  rose
 ```
 
-`longPress` viene emesso una sola volta per ogni pressione quando `isDown` 
-resta LOW per il tempo indicato.
+`longPress` is fired only once for each press when `isDown` remains LOW for the
+specified duration.
+
