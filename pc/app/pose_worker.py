@@ -6,6 +6,8 @@ import shutil
 from pathlib import Path
 from cube_minimal.cube_pose.api import estimate_cube_from_image
 
+from logger import get_logger
+
 try:
     import cv2
     import numpy as np
@@ -13,7 +15,10 @@ try:
 except Exception:
     cv2, np, HAS_CV = None, None, False
 
+log = get_logger("POSE")
+
 class PoseWorker:
+<<<<<<< HEAD
     """Background worker responsible for pose estimation."""
 
     def __init__(
@@ -27,6 +32,11 @@ class PoseWorker:
             ble_queue (asyncio.Queue[str]): Queue for BLE status messages.
         """
 
+=======
+    """Asynchronous worker that estimates cube pose for capture sessions."""
+
+    def __init__(self, cfg: dict, output_root: Path, ble_queue: asyncio.Queue[str]):
+>>>>>>> main
         self.cfg = cfg
         self.output_root = output_root
         self.queue: asyncio.Queue = asyncio.Queue()
@@ -40,6 +50,7 @@ class PoseWorker:
             self.loop = asyncio.get_event_loop()
 
     async def start(self):
+<<<<<<< HEAD
         """Launch worker tasks if pose estimation is enabled.
 
         Side Effects:
@@ -48,24 +59,34 @@ class PoseWorker:
 
         if not self.enabled:
             print("[POSE] disabled")
+=======
+        """Spawn worker tasks if pose estimation is enabled."""
+        if not self.enabled:
+            log.info("disabled")
+>>>>>>> main
             return
-        print(f"[POSE] starting workers = {self.max_jobs}")
+        log.info(f"starting workers = {self.max_jobs}")
         for _ in range(self.max_jobs):
             self.tasks.append(asyncio.create_task(self._worker()))
 
     async def stop(self):
+<<<<<<< HEAD
         """Signal workers to exit and wait for their completion.
 
         Side Effects:
             Cancels background tasks and empties the job queue.
         """
 
+=======
+        """Signal workers to exit and wait for completion."""
+>>>>>>> main
         for _ in self.tasks:
             await self.queue.put(None)
         await asyncio.gather(*self.tasks, return_exceptions=True)
         self.tasks.clear()
 
     async def _worker(self):
+<<<<<<< HEAD
         """Worker coroutine consuming session jobs from the queue.
 
         Side Effects:
@@ -73,6 +94,9 @@ class PoseWorker:
             threads.
         """
 
+=======
+        """Consume jobs from the queue and process sessions in threads."""
+>>>>>>> main
         while True:
             job = await self.queue.get()
             if job is None:
@@ -80,9 +104,10 @@ class PoseWorker:
             try:
                 await asyncio.to_thread(self._process_session, job)
             except Exception as e:
-                print(f"[POSE] job error: {e}")
+                log.error(f"job error: {e}")
 
     def _process_session(self, job: dict):
+<<<<<<< HEAD
         """Process a single capture session.
 
         Args:
@@ -94,6 +119,9 @@ class PoseWorker:
             BLE client about computation start and end.
         """
 
+=======
+        """Process a completed capture session and write results to JSON."""
+>>>>>>> main
         session_dir = Path(job["session_dir"])
         start_iso = job["start"]
         end_iso = job["end"]
@@ -102,14 +130,14 @@ class PoseWorker:
         method = self.cfg["pose"].get("method", "charuco").lower()
         out_json = self.output_root / f"{session_dir.name}_pose.json"
 
-        print(f"[POSE] Processing {session_dir.name} with method={method}")
+        log.info(f"Processing {session_dir.name} with method={method}")
 
         asyncio.run_coroutine_threadsafe(
             self.ble_queue.put("COMPUTATION START"), self.loop
         )
         try:
             frames = sorted(
-                [p for p in session_dir.glob("*") if p.suffix.lower() in (".jpg",".jpeg",".png",".tif",".tiff")]
+                [p for p in session_dir.glob("*") if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".tif", ".tiff")]
             )
             results = {
                 "session": session_dir.name,
@@ -124,9 +152,9 @@ class PoseWorker:
                 results["frames"] = self._pose_charuco(frames)
             elif method == "custom":
                 for p in frames:
-                    results["frames"].append({
-                        "file": p.name, "ok": False, "reason": "custom_not_implemented"
-                    })
+                    results["frames"].append(
+                        {"file": p.name, "ok": False, "reason": "custom_not_implemented"}
+                    )
             else:
                 reason = "missing_opencv_contrib_or_invalid_method"
                 for p in frames:
@@ -143,19 +171,28 @@ class PoseWorker:
             if delete_frames and not debug:
                 try:
                     shutil.rmtree(session_dir)
+<<<<<<< HEAD
                     print(f"[POSE] {session_dir.name} removed (frames deleted)")
+=======
+                    log.info(f"{session_dir.name} deleted (frames removed)")
+>>>>>>> main
                 except Exception as e:
-                    print(f"[POSE] rmtree error: {e}")
+                    log.error(f"rmtree error: {e}")
             else:
+<<<<<<< HEAD
                 print(
                     f"[POSE] frames kept (delete_frames={delete_frames}, debug={debug})"
                 )
+=======
+                log.info(f"frames kept (delete_frames={delete_frames}, debug={debug})")
+>>>>>>> main
         finally:
             asyncio.run_coroutine_threadsafe(
                 self.ble_queue.put("COMPUTATION END"), self.loop
             )
 
     def _pose_charuco(self, frames: list[Path]) -> list[dict]:
+<<<<<<< HEAD
         """Estimate pose using ChArUco markers for provided frames.
 
         Args:
@@ -168,6 +205,9 @@ class PoseWorker:
             May overwrite frame files with overlay images.
         """
 
+=======
+        """Estimate pose using ArUco cube markers for each frame."""
+>>>>>>> main
         res = []
         pose_cfg = self.cfg["pose"]["cube"]
         dict_name = pose_cfg.get("dictionary", "4X4_50")

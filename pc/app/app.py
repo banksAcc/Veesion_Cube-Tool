@@ -1,8 +1,4 @@
-"""Entry point for the PC application.
-
-This module loads configuration, sets up the pose worker and session manager,
-and starts the BLE client used to trigger image capture sessions.
-"""
+"""Application entry point tying together BLE, capture and pose estimation."""
 
 import asyncio
 import sys
@@ -13,45 +9,24 @@ import yaml
 from ble_client import run_ble_client
 from pose_worker import PoseWorker
 from session_manager import SessionManager
+from logger import setup_logging, get_logger
 
-# Recommended event loop policy for Windows
+# Loop policy recommended for Windows
+
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 def load_config(path: Path) -> dict:
-    """Read a YAML configuration file.
-
-    Args:
-        path (Path): Path to the configuration file.
-
-    Returns:
-        dict: Parsed configuration content.
-
-    Side Effects:
-        Reads from disk.
-    """
-
+    """Load a YAML configuration file and return it as a dictionary."""
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
 async def main():
-    """Run the main application coroutine.
-
-    Loads configuration, creates background workers and starts the BLE client.
-    The coroutine exits only when the BLE client stops and performs a clean
-    shutdown of resources.
-
-    Returns:
-        None
-
-    Side Effects:
-        Creates output directories, starts asynchronous tasks and interacts
-        with the BLE device.
-    """
-
+    """Set up components and run the BLE client loop."""
     cfg = load_config(Path("config.yaml"))
+    setup_logging(cfg)
 
     output_root = Path(cfg["capture"]["output_root"])
     output_root.mkdir(parents=True, exist_ok=True)
@@ -59,11 +34,12 @@ async def main():
     # Queue for outgoing BLE messages
     ble_queue: asyncio.Queue[str] = asyncio.Queue()
 
-    # Start asynchronous pose worker
+    # Start async pose worker
     pose_worker = PoseWorker(cfg, output_root, ble_queue)
     await pose_worker.start()
 
-    # Session manager for captures referencing the worker
+    # Session manager with reference to the worker
+
     session_mgr = SessionManager(cfg, output_root, pose_worker.queue)
 
     # Start BLE client (blocking until interrupted)
@@ -76,7 +52,8 @@ async def main():
 
 
 if __name__ == "__main__":
+    main_log = get_logger("MAIN")
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n[MAIN] Interrupted by user.")
+        main_log.info("Interrupted by user.")
