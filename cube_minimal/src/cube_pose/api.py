@@ -3,6 +3,7 @@ API di alto livello per stimare la posa del cubo da una singola immagine.
 """
 
 from typing import Dict, Any, Union
+import os
 import numpy as np
 import cv2 as cv
 
@@ -45,13 +46,20 @@ def estimate_cube_from_image(
     """
     # Carica immagine
     if isinstance(image_or_path, str):
+        if not os.path.isfile(image_or_path):
+            raise FileNotFoundError(f"Immagine non trovata: {image_or_path}")
         img = cv.imread(image_or_path)
         if img is None:
             raise ValueError(f"Immagine non leggibile: {image_or_path}")
     else:
         img = image_or_path
-        if img is None or not isinstance(img, np.ndarray) or img.ndim != 3:
-            raise ValueError("image_or_path deve essere path str o BGR np.ndarray (H,W,3).")
+
+    if not isinstance(img, np.ndarray):
+        raise ValueError("image_or_path deve essere path str o array numpy")
+    if img.ndim != 3 or img.shape[2] != 3 or img.dtype != np.uint8:
+        raise ValueError(
+            f"L'immagine deve essere BGR np.uint8 con shape (H,W,3); got dtype={img.dtype}, shape={getattr(img, 'shape', None)}"
+        )
 
     # Camera
     K, dist = load_camera(camera_npz)
