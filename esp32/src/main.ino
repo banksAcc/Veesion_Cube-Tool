@@ -14,6 +14,12 @@ DisplayManager OLED;
 // per gestione long-press immediata
 static bool bleLongHandled = false;
 static unsigned long displayOffAtMs  = 0;
+static ButtonEvents bBle;
+static ButtonEvents bEvt;
+
+void handleBleButton();
+void handleEventButton();
+void updateIdleLed();
 
 void setup() {
   Serial.begin(115200);
@@ -61,28 +67,33 @@ void setup() {
 }
 
 void loop() {
-  // Spegnimento differito OLED
+  handleBleButton();
+  handleEventButton();
+  updateIdleLed();
+  LEDS.loop();
+  OLED.loop();
+}
+
+// Gestisce il pulsante BLE e lo spegnimento ritardato dell'OLED.
+// Prerequisiti: BTNS, BLE, LEDS e OLED inizializzati e funzione richiamata ad ogni ciclo.
+void handleBleButton() {
   if (displayOffAtMs && millis() >= displayOffAtMs) {
     displayOffAtMs = 0;
     OLED.setBleEnabled(false);
   }
 
-  // ===== BTN BLE (pin 17) =====
-  auto bBle = BTNS.pollBle(BLE_LONG_MS);
-
+  bBle = BTNS.pollBle(BLE_LONG_MS);
   if (bBle.fell) {
     bleLongHandled = false;
-    LEDS.setState(LedState::ARMING);           // feedback mentre lo tieni
+    LEDS.setState(LedState::ARMING);
     if (BLE.isEnabled()) OLED.setUiState(UiState::ARMING);
   }
 
+  static unsigned long holdStart = 0;
   if (bBle.isDown && !bleLongHandled) {
-    // attiva long-press appena supera soglia, senza attendere rilascio
-    static unsigned long holdStart = 0;
     if (!holdStart) holdStart = millis();
     if (millis() - holdStart >= BLE_LONG_MS) {
       bleLongHandled = true; holdStart = 0;
-      // toggle immediato
       if (BLE.isEnabled()) {
         if (BLE.isConnected()) BLE.disconnect();
         BLE.stopAdvertising();
@@ -98,12 +109,10 @@ void loop() {
     }
   }
   if (!bBle.isDown) {
-    // reset hold timer quando rilascia
-    static unsigned long holdStart = 0; holdStart = 0;
+    holdStart = 0;
   }
 
   if (bBle.rose && !bleLongHandled) {
-    // short-press: disconnetti e torna in ADV
     if (BLE.isConnected()) BLE.disconnect();
     if (BLE.isEnabled()) {
       BLE.startAdvertising();
@@ -112,11 +121,13 @@ void loop() {
       OLED.setUiState(UiState::BLE_ON);
     }
   }
+}
 
-  // ===== BTN EVENT (pin 16) =====
-  auto bEvt = BTNS.pollEvt(1500);
+// Gestisce il pulsante EVENT per inviare messaggi START/END e forzare temporaneamente i LED.
+// Prerequisito: connessione BLE attiva per l'invio dei messaggi.
+void handleEventButton() {
+  bEvt = BTNS.pollEvt(1500);
 
-  // LED rosso SOLO se connesso
   if (bEvt.isDown && BLE.isConnected()) {
     LEDS.setState(LedState::EVENT_RED);
   }
@@ -125,7 +136,7 @@ void loop() {
     if (BLE.isConnected()) {
       BLE.sendLine("START\n");
       Serial.println("[BLE] TX: START");
-      OLED.setUiState(UiState::SENDING);  // anim puntini
+      OLED.setUiState(UiState::SENDING);
     } else {
       Serial.println("[BLE] TX IGNORED: not connected");
     }
@@ -138,8 +149,11 @@ void loop() {
       LEDS.setState(LedState::CONNECTED);
     }
   }
+}
 
-  // ===== Stato LED “di base” quando non stai forzando con i tasti =====
+// Ripristina lo stato base dei LED quando nessun pulsante è premuto.
+// Prerequisito: chiamare prima handleBleButton() e handleEventButton().
+void updateIdleLed() {
   if (!bEvt.isDown && !bBle.isDown && !bleLongHandled) {
     if (BLE.isEnabled()) {
       if (BLE.isConnected()) LEDS.setState(LedState::CONNECTED);
@@ -148,7 +162,4 @@ void loop() {
       LEDS.setState(LedState::OFF);
     }
   }
-
-  LEDS.loop();
-  OLED.loop();
 }
