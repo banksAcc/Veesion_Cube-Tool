@@ -67,7 +67,7 @@ class PoseWorker:
         end_iso = job["end"]
         freq_ms = int(job["freq_ms"])
 
-        method = self.cfg["pose"].get("method", "charuco").lower()
+        method = self.cfg["pose"].get("method", "cube").lower()
         out_json = self.output_root / f"{session_dir.name}_pose.json"
 
         log.info(f"Processing {session_dir.name} with method={method}")
@@ -88,8 +88,8 @@ class PoseWorker:
                 "frames": [],
             }
 
-            if method == "charuco" and HAS_CV and hasattr(cv2, "aruco"):
-                results["frames"] = self._pose_charuco(frames)
+            if method == "cube" and HAS_CV and hasattr(cv2, "aruco"):
+                results["frames"] = self._pose_cube(frames)
             elif method == "custom":
                 for p in frames:
                     results["frames"].append(
@@ -121,8 +121,8 @@ class PoseWorker:
                 self.ble_queue.put("COMPUTATION END"), self.loop
             )
 
-    def _pose_charuco(self, frames: list[Path]) -> list[dict]:
-        """Estimate pose using ArUco cube markers for each frame."""
+    def _pose_cube(self, frames: list[Path]) -> list[dict]:
+        """Estimate cube pose using ArUco markers for each frame."""
         res = []
         pose_cfg = self.cfg["pose"]["cube"]
         dict_name = pose_cfg.get("dictionary", "4X4_50")
