@@ -2,7 +2,7 @@ import asyncio
 import json
 import shutil
 from pathlib import Path
-from cube_minimal.cube_pose.api import estimate_cube_from_image
+from cube_minimal.cube_minimal.cube_pose.api import estimate_cube_from_image
 
 try:
     import cv2
@@ -115,6 +115,7 @@ class PoseWorker:
                     marker_size,
                     cube_size,
                     pair_strategy=pair_strategy,
+                    return_overlay=True,
                 )
             except FileNotFoundError:
                 res.append({"file": p.name, "ok": False, "reason": "read_fail"})
@@ -125,7 +126,15 @@ class PoseWorker:
             except Exception:
                 res.append({"file": p.name, "ok": False, "reason": "pose_fail"})
                 continue
-
+            
+            overlay = result.get("overlay")
+            if overlay is not None:
+                try:
+                    cv2.imwrite(str(p), overlay)
+                except Exception:
+                    # if saving overlay fails, keep processing without altering result
+                    pass
+        
             res.append({
                 "file": p.name,
                 "ok": True,
