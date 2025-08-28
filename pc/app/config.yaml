@@ -1,34 +1,34 @@
 ble:
-  name_prefix: "ESP32-RGB-BLE"     # oppure usa "addr" per collegarti diretto a un indirizzo
-  addr: null                       # es. "44:1D:64:F4:AC:D2" su Linux/Mac, GUID su Windows
-  scan_timeout: 8.0                # secondi
+  name_prefix: "ESP32-RGB-BLE"     # optional; use "addr" for a fixed device
+  addr: null                       # e.g. "44:1D:64:F4:AC:D2" on Linux/Mac, GUID on Windows
+  scan_timeout: 8.0                # seconds
 
 capture:
   frequency_ms: 200
-  output_root: "../captures"          # può stare anche in OneDrive; io terrei locale per prestazioni
-  use_camera: false                 # false = test mode (usa immagini da una cartella)
-  camera_id: 0                     # id della webcam (0 di solito va)
-  image_format: "tiff"             # "jpg" o "png"
+  output_root: "../captures"       # destination folder for new sessions
+  use_camera: false                 # false = test mode (copy images from a folder)
+  camera_id: 0                     # OpenCV index or Basler serial
+  image_format: "tiff"             # jpg | png | tiff
   jpeg_quality: 90
   tiff_compression: "lzw"          # none | lzw | deflate | packbits
-  test_source_dir: "../image_to_be_used"   # usato se use_camera=false
-  stop_on_test_exhausted: false    # se true, termina la sessione quando finiscono le immagini
-  stop_on_ble_disconnect: true     # stop autom. scatto se cade BLE
-  keep_session_frames_on_error: true # se errore durante stop/rename, non rimuovere nulla
+  test_source_dir: "../image_to_be_used"   # used when use_camera=false
+  stop_on_test_exhausted: false    # stop session when test images end
+  stop_on_ble_disconnect: true     # auto stop if BLE disconnects
+  keep_session_frames_on_error: true # keep frames if renaming fails
 
 pose:
   enabled: true
-  method: "charuco"                # "charuco" | "custom"
-  max_parallel_jobs: 3             # ok 3 (CPU permettendo)
+  method: "charuco"                # charuco | custom
+  max_parallel_jobs: 3
   delete_frames_after_processing: true
-  results_format: "json"           # json (consigliato)
+  results_format: "json"           # json (recommended)
   cube:
     dictionary: "4X4_50"
-    marker_size_mm: 53.0      # lato del marker (solo parte nera)
-    cube_size_mm: 62.0        # lato del cubo
-    pair_strategy: "first"    # oppure "max_angle"
-  camera_calibration_npz: "../calib/calib_data.npz"  # deve contenere 'camera_matrix' e 'dist_coeffs'
+    marker_size_mm: 53.0      # edge of the black square
+    cube_size_mm: 62.0        # cube edge
+    pair_strategy: "first"    # or "max_angle"
+  camera_calibration_npz: "../calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
 
 runtime:
-  debug: true                      # log più verboso
-  log_to_file: true               # se vuoi un log globale, altrimenti solo console
+  debug: true                    # verbose logging
+  log_to_file: true              # global log file
