@@ -1,7 +1,7 @@
 import shutil
 import time
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 try:
     import cv2
@@ -22,7 +22,7 @@ class BaseCapture:
         if fmt in ("png",):
             ok = cv2.imwrite(str(path), frame)
         elif fmt in ("tif", "tiff"):
-            # opzionale: compressione da config
+            # optional: compression from config
             comp_map = {"none": 1, "lzw": 2, "packbits": 3, "deflate": 4}
             comp_name = str(self.cfg["capture"].get("tiff_compression", "none")).lower()
             comp = comp_map.get(comp_name, 1)
@@ -39,18 +39,18 @@ class CameraCapture(BaseCapture):
         super().__init__(cfg)
         self.cam = None
 
-    def capture_loop(self, dest_dir: Path, freq_ms: int, stop_evt, log: Callable[[str], None]):
+    def capture_loop(self, dest_dir: Path, freq_ms: int, stop_evt, log: Callable[[str, str], None]):
         if cv2 is None:
-            log("[CAPTURE] OpenCV non disponibile: impossibile usare la camera")
+            log("OpenCV not available: cannot use camera", "error")
             return
 
         cam_id = int(self.cfg["capture"].get("camera_id", 0))
         self.cam = cv2.VideoCapture(cam_id)
         if not self.cam.isOpened():
-            log(f"[CAPTURE] Impossibile aprire la camera id={cam_id}")
+            log(f"Failed to open camera id={cam_id}", "error")
             return
 
-        log(f"[CAPTURE] Camera aperta id={cam_id}, freq={freq_ms}ms")
+        log(f"Camera opened id={cam_id}, freq={freq_ms}ms", "info")
         period = max(0.001, freq_ms / 1000.0)
         next_t = time.perf_counter()
 
@@ -58,7 +58,7 @@ class CameraCapture(BaseCapture):
         while not stop_evt.is_set():
             ret, frame = self.cam.read()
             if not ret or frame is None:
-                log("[CAPTURE] Frame non valido (ret=False)")
+                log("Invalid frame (ret=False)", "warning")
             else:
                 idx += 1
                 ts = time.strftime("%Y%m%d_%H%M%S")
@@ -71,17 +71,17 @@ class CameraCapture(BaseCapture):
                 time.sleep(sleep)
 
         self.cam.release()
-        log("[CAPTURE] Camera rilasciata")
+        log("Camera released", "info")
 
 class TestCapture(BaseCapture):
     def __init__(self, cfg: dict):
         super().__init__(cfg)
         self.src = Path(cfg["capture"].get("test_source_dir", "test_images"))
 
-    def capture_loop(self, dest_dir: Path, freq_ms: int, stop_evt, log: Callable[[str], None]):
+    def capture_loop(self, dest_dir: Path, freq_ms: int, stop_evt, log: Callable[[str, str], None]):
         imgs = sorted([p for p in self.src.glob("*") if p.is_file()])
         if not imgs:
-            log(f"[CAPTURE] Nessuna immagine in {self.src}")
+            log(f"No images in {self.src}", "error")
             return
 
         period = max(0.001, freq_ms / 1000.0)
@@ -91,16 +91,16 @@ class TestCapture(BaseCapture):
         pos = 0
         stop_on_exhausted = bool(self.cfg["capture"].get("stop_on_test_exhausted", False))
 
-        log(f"[CAPTURE] Test mode: copying from {self.src}, freq={freq_ms}ms, stop_on_exhausted={stop_on_exhausted}")
+        log(f"Test mode: copying from {self.src}, freq={freq_ms}ms, stop_on_exhausted={stop_on_exhausted}", "info")
 
         while not stop_evt.is_set():
             src_img = imgs[pos]
             pos += 1
             if pos >= len(imgs):
                 if stop_on_exhausted:
-                    log("[CAPTURE] test images exhausted -> stop session")
+                    log("test images exhausted -> stop session", "info")
                     break
-                pos = 0  # ricomincia
+                pos = 0  # restart from beginning
 
             idx += 1
             ts = time.strftime("%Y%m%d_%H%M%S")
@@ -110,11 +110,11 @@ class TestCapture(BaseCapture):
             try:
                 shutil.copy2(src_img, dst)
             except Exception as e:
-                log(f"[CAPTURE] copy error: {e}")
+                log(f"copy error: {e}", "error")
 
             next_t += period
             sleep = next_t - time.perf_counter()
             if sleep > 0:
                 time.sleep(sleep)
 
-        log("[CAPTURE] Test mode: loop terminato")
+        log("Test mode: loop finished", "info")

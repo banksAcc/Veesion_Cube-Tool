@@ -30,5 +30,6 @@ pose:
   camera_calibration_npz: "../calib/calib_data.npz"  # deve contenere 'camera_matrix' e 'dist_coeffs'
 
 runtime:
-  debug: true                      # log più verboso
-  log_to_file: true               # se vuoi un log globale, altrimenti solo console
+  debug: true                      # extra debug behavior
+  log_level: INFO                 # DEBUG, INFO, WARNING, ERROR
+  log_to_file: true               # write global app.log in addition to console

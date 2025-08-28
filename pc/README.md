@@ -160,6 +160,7 @@ pose:
 
 runtime:
   debug: true
+  log_level: INFO      # DEBUG, INFO, WARNING, ERROR
   log_to_file: false
 ```
 
@@ -197,9 +198,11 @@ Supporto **TIFF** con compressione opzionale LZW/Deflate, e **16-bit** (converti
 - Se `delete_frames_after_processing=true` **e** `runtime.debug=false` ⇒ i frame della sessione vengono **rimossi** dopo il calcolo (lo JSON rimane).
 
 ### Logging & Debug
-- Ogni sessione ha un **`session.log`** nella propria cartella.
-- Logging su console; opzionalmente un log globale con `runtime.log_to_file: true` (puoi estendere facilmente con `logging` modulare).
-- Stato incoerente (START/START, END/END) segnalato in console (non interrompe la pipeline).
+- Each session writes a **`session.log`** in its own folder.
+- Log messages are prefixed by component (e.g., `[BLE]`, `[CAPTURE]`) and respect the verbosity from `runtime.log_level`.
+- Available levels: `DEBUG`, `INFO`, `WARNING`, `ERROR`. Adjust `runtime.log_level` in `config.yaml` and restart the app to change verbosity.
+- Enable `runtime.log_to_file: true` to also write a global log file (`app.log`).
+- Inconsistent state (START/START, END/END) is reported on console but does not stop the pipeline.
 
 ### Troubleshooting
 - **BLE non si connette**: spegni/riaccendi Bluetooth di sistema; chiudi app concorrenti (es. nRF Connect). Su Windows, lo script imposta automaticamente la **WindowsSelectorEventLoopPolicy**.
