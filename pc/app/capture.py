@@ -9,13 +9,21 @@ try:
 except Exception:
     cv2 = None
 
+try:
+    from pypylon import pylon
+except Exception:  # pragma: no cover - optional dependency
+    pylon = None
+
 class BaseCapture:
+    """Common image saving helpers for capture implementations."""
+
     def __init__(self, cfg: dict):
         self.cfg = cfg
         self.image_format = cfg["capture"].get("image_format", "jpg").lower()
         self.jpeg_quality = int(cfg["capture"].get("jpeg_quality", 90))
 
     def _save_image(self, frame, path: Path):
+        """Persist an image frame to disk using the configured format."""
         if frame is None:
             raise RuntimeError("Frame is None - cannot save")
 
@@ -23,7 +31,7 @@ class BaseCapture:
         if fmt in ("png",):
             ok = cv2.imwrite(str(path), frame)
         elif fmt in ("tif", "tiff"):
-            # opzionale: compressione da config
+            # optional: compression from config
             comp_map = {"none": 1, "lzw": 2, "packbits": 3, "deflate": 4}
             comp_name = str(self.cfg["capture"].get("tiff_compression", "none")).lower()
             comp = comp_map.get(comp_name, 1)
@@ -36,22 +44,44 @@ class BaseCapture:
 
 
 class CameraCapture(BaseCapture):
+    """Capture images from a real camera using OpenCV's VideoCapture."""
+
     def __init__(self, cfg: dict):
         super().__init__(cfg)
         self.cam = None
 
     def capture_loop(self, dest_dir: Path, freq_ms: int, stop_evt, log: Callable[[str], None]):
+        """Continuously grab frames from a camera and save them to *dest_dir*.
+
+        Works with generic webcams and industrial cameras such as Basler
+        when the appropriate drivers are installed.
+        """
         if cv2 is None:
-            log("[CAPTURE] OpenCV non disponibile: impossibile usare la camera")
+            log("[CAPTURE] OpenCV not available: cannot use camera")
             return
-
-        cam_id = int(self.cfg["capture"].get("camera_id", 0))
-        self.cam = cv2.VideoCapture(cam_id)
-        if not self.cam.isOpened():
-            log(f"[CAPTURE] Impossibile aprire la camera id={cam_id}")
+        cam_type = str(self.cfg["capture"].get("camera_type", "webcam")).lower()
+        if cam_type == "webcam":
+            cam_id = int(self.cfg["capture"].get("camera_id", 0))
+            self.cam = cv2.VideoCapture(cam_id)
+            if not self.cam.isOpened():
+                log(f"[CAPTURE] Unable to open webcam id={cam_id}")
+                return
+            log(f"[CAPTURE] Webcam opened id={cam_id}, freq={freq_ms}ms")
+        elif cam_type == "ip":
+            cam_ip = self.cfg["capture"].get("camera_ip")
+            if not cam_ip:
+                log("[CAPTURE] camera_ip not set for IP camera")
+                return
+            self.cam = cv2.VideoCapture(str(cam_ip))
+            if not self.cam.isOpened():
+                log(f"[CAPTURE] Unable to open IP camera at {cam_ip}")
+                return
+            log(f"[CAPTURE] IP camera opened at {cam_ip}, freq={freq_ms}ms")
+        else:
+            cam_serial = self.cfg["capture"].get("camera_serial")
+            log(f"[CAPTURE] Unsupported camera_type={cam_type} (serial={cam_serial})")
             return
-
-        log(f"[CAPTURE] Camera aperta id={cam_id}, freq={freq_ms}ms")
+       
         period = max(0.001, freq_ms / 1000.0)
         next_t = time.perf_counter()
 
@@ -59,7 +89,7 @@ class CameraCapture(BaseCapture):
         while not stop_evt.is_set():
             ret, frame = self.cam.read()
             if not ret or frame is None:
-                log("[CAPTURE] Frame non valido (ret=False)")
+                log("[CAPTURE] Invalid frame (ret=False)")
             else:
                 idx += 1
                 ts = time.strftime("%Y%m%d_%H%M%S")
@@ -72,7 +102,84 @@ class CameraCapture(BaseCapture):
                 time.sleep(sleep)
 
         self.cam.release()
-        log("[CAPTURE] Camera rilasciata")
+        log("[CAPTURE] Camera released")
+
+
+
+class PylonCapture(BaseCapture):
+    """Capture backend using Basler's pypylon SDK."""
+
+    def __init__(self, cfg: dict):
+        super().__init__(cfg)
+        self.cam: Optional["pylon.InstantCamera"] = None
+        self.converter: Optional["pylon.ImageFormatConverter"] = None
+
+    def _open_camera(self, log: Callable[[str], None]):
+        if pylon is None:
+            raise RuntimeError("pypylon non disponibile")
+
+        factory = pylon.TlFactory.GetInstance()
+        serial = self.cfg["capture"].get("camera_serial")
+        ip = self.cfg["capture"].get("camera_ip")
+
+        if serial:
+            serial = str(serial)
+            for dev in factory.EnumerateDevices():
+                if dev.GetSerialNumber() == serial:
+                    self.cam = pylon.InstantCamera(factory.CreateDevice(dev))
+                    break
+            if self.cam is None:
+                raise RuntimeError(f"Nessuna camera con serial {serial}")
+        elif ip:
+            di = pylon.DeviceInfo()
+            di.SetIpAddress(str(ip))
+            self.cam = pylon.InstantCamera(factory.CreateDevice(di))
+        else:
+            self.cam = pylon.InstantCamera(factory.CreateFirstDevice())
+
+        self.cam.Open()
+        self.converter = pylon.ImageFormatConverter()
+        self.converter.OutputPixelFormat = pylon.PixelType_BGR8packed
+        self.converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
+
+    def capture_loop(self, dest_dir: Path, freq_ms: int, stop_evt, log: Callable[[str], None]):
+        try:
+            self._open_camera(log)
+        except Exception as e:
+            log(f"[CAPTURE] pylon open failed: {e}")
+            return
+
+        log("[CAPTURE] Pylon camera aperta")
+        self.cam.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
+
+        period = max(0.001, freq_ms / 1000.0)
+        next_t = time.perf_counter()
+        idx = 0
+
+        while not stop_evt.is_set() and self.cam.IsGrabbing():
+            grab = self.cam.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
+            if grab.GrabSucceeded():
+                img = self.converter.Convert(grab)
+                frame = img.GetArray()
+                idx += 1
+                ts = time.strftime("%Y%m%d_%H%M%S")
+                fname = f"frame_{idx:06d}_{ts}.{self.image_format}"
+                try:
+                    self._save_image(frame, dest_dir / fname)
+                except Exception as e:
+                    log(f"[CAPTURE] save error: {e}")
+            else:
+                log("[CAPTURE] grab fallita")
+            grab.Release()
+
+            next_t += period
+            sleep = next_t - time.perf_counter()
+            if sleep > 0:
+                time.sleep(sleep)
+
+        self.cam.StopGrabbing()
+        self.cam.Close()
+        log("[CAPTURE] Pylon camera rilasciata")
 
 class TestCapture(BaseCapture):
     """Simulated capture that replays a directory of still images.
@@ -89,6 +196,7 @@ class TestCapture(BaseCapture):
         self.shuffle = bool(cfg["capture"].get("shuffle_test_images", False))
 
     def capture_loop(self, dest_dir: Path, freq_ms: int, stop_evt, log: Callable[[str], None]):
+        """Copy images from the source directory into *dest_dir* at the given rate."""
         imgs = sorted([p for p in self.src.glob("*") if p.is_file()])
         if not imgs:
             log(f"[CAPTURE] No images found in {self.src}")
@@ -123,7 +231,6 @@ class TestCapture(BaseCapture):
                 else:
                     log("[CAPTURE] Test images exhausted -> restart sequence")
                 pos = 0  # restart sequence
-
             idx += 1
             ts = time.strftime("%Y%m%d_%H%M%S")
             fname = f"frame_{idx:06d}_{ts}.{self.image_format}"
