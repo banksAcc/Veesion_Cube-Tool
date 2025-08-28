@@ -2,8 +2,9 @@
 
 import asyncio
 import sys
-import yaml
 from pathlib import Path
+
+import yaml
 
 from ble_client import run_ble_client
 from pose_worker import PoseWorker
