@@ -44,13 +44,29 @@ class CameraCapture(BaseCapture):
             log("[CAPTURE] OpenCV non disponibile: impossibile usare la camera")
             return
 
-        cam_id = int(self.cfg["capture"].get("camera_id", 0))
-        self.cam = cv2.VideoCapture(cam_id)
-        if not self.cam.isOpened():
-            log(f"[CAPTURE] Impossibile aprire la camera id={cam_id}")
+        cam_type = str(self.cfg["capture"].get("camera_type", "webcam")).lower()
+        if cam_type == "webcam":
+            cam_id = int(self.cfg["capture"].get("camera_id", 0))
+            self.cam = cv2.VideoCapture(cam_id)
+            if not self.cam.isOpened():
+                log(f"[CAPTURE] Unable to open webcam id={cam_id}")
+                return
+            log(f"[CAPTURE] Webcam opened id={cam_id}, freq={freq_ms}ms")
+        elif cam_type == "ip":
+            cam_ip = self.cfg["capture"].get("camera_ip")
+            if not cam_ip:
+                log("[CAPTURE] camera_ip not set for IP camera")
+                return
+            self.cam = cv2.VideoCapture(str(cam_ip))
+            if not self.cam.isOpened():
+                log(f"[CAPTURE] Unable to open IP camera at {cam_ip}")
+                return
+            log(f"[CAPTURE] IP camera opened at {cam_ip}, freq={freq_ms}ms")
+        else:
+            cam_serial = self.cfg["capture"].get("camera_serial")
+            log(f"[CAPTURE] Unsupported camera_type={cam_type} (serial={cam_serial})")
             return
 
-        log(f"[CAPTURE] Camera aperta id={cam_id}, freq={freq_ms}ms")
         period = max(0.001, freq_ms / 1000.0)
         next_t = time.perf_counter()
 

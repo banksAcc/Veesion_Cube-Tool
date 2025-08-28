@@ -167,6 +167,29 @@ pip install -r app/requirements.txt
 python app/main.py   --ble-name ARU-PEN   --camera 0   --dict DICT_4X4_50   --marker-size-mm 20.0
 ```
 
+### Example configurations
+
+`pc/app/config.yaml` supports several camera setups:
+
+```yaml
+capture:
+  # Use a local webcam
+  camera_type: "webcam"
+  camera_id: 0
+
+  # Industrial camera by serial number
+  # camera_type: "basler"
+  # camera_serial: "40012345"
+
+  # Or connect to a network camera
+  # camera_type: "ip"
+  # camera_ip: "rtsp://192.168.0.10/stream"
+
+  # Enable simulation using images from a folder
+  simulate_camera: true
+  test_source_dir: "../image_to_be_used"
+```
+
 ---
 
 ## 🔗 Protocollo BLE (proposta)

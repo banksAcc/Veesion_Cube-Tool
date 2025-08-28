@@ -130,11 +130,14 @@ ble:
 capture:
   frequency_ms: 200
   output_root: "captures"
-  use_camera: true
+  simulate_camera: false       # true = test mode (uses images from a folder)
+  camera_type: "webcam"       # "webcam", "ip", etc.
   camera_id: 0
-  image_format: "jpg"        # supportati: jpg/png/tif/tiff
+  camera_serial: null
+  camera_ip: null
+  image_format: "jpg"        # supported: jpg/png/tif/tiff
   jpeg_quality: 90
-  tiff_compression: "lzw"    # opzionale
+  tiff_compression: "lzw"    # optional
   test_source_dir: "test_images"
   stop_on_test_exhausted: false
   stop_on_ble_disconnect: true
@@ -173,8 +176,8 @@ runtime:
 - Al **END** la sessione viene messa in coda per la **pose** (in parallelo puoi già iniziare un nuovo `START`).
 
 ### Cattura: Camera reale vs Test mode
-- **Camera reale**: `use_camera: true` → usa `cv2.VideoCapture(camera_id)`.
-- **Test mode**: `use_camera: false` → copia immagini da `test_source_dir` con cadenza `frequency_ms`.  
+- **Camera reale**: `simulate_camera: false` → usa `camera_type` per selezionare la sorgente (`webcam`, `ip`, ecc.).
+- **Test mode**: `simulate_camera: true` → copia immagini da `test_source_dir` con cadenza `frequency_ms`.
   Se finiscono:
   - `stop_on_test_exhausted: true` ⇒ **termina** la sessione.
   - `false` ⇒ **ricomincia** dall’inizio (ciclo).
