@@ -1,3 +1,11 @@
+/**
+ * @file DisplayManager.h
+ * @brief Gestione del display OLED SSD1306 per lo stato della penna.
+ *
+ * Responsabilità: mostra stato BLE, messaggi e animazioni.
+ * Dipendenze: Arduino core, Adafruit_SSD1306, Adafruit_GFX, Wire.
+ */
+
 #pragma once
 #include <Arduino.h>
 #include "UiState.h"
@@ -7,13 +15,18 @@ class Adafruit_SSD1306;
 
 class DisplayManager {
  public:
+  /// Inizializza il display e prepara le risorse grafiche.
   bool begin();
+  /// Aggiorna eventuali animazioni del display.
   void loop();
 
+  /// Accende o spegne il display in base allo stato del BLE.
   void setBleEnabled(bool on);
+  /// Imposta lo stato dell'interfaccia utente da visualizzare.
   void setUiState(UiState s);
 
   // indicatore "Pose Exti" (ex computation)
+  /// Mostra o nasconde l'indicatore di calcolo posa.
   void setComputing(bool on);
 
  private:
