@@ -15,8 +15,7 @@ Mini-moduli riutilizzabili per:
 from cube_minimal.cube_pose.api import estimate_cube_from_image
 
 res = estimate_cube_from_image(
-    image_or_path="example_1.png",
-    sample_dir="cube_minimal/data/sample_dataset",
+    image_or_path="cube_minimal/data/sample_dataset/example_1.png",
     camera_npz="cube_minimal/config/calib_data.npz",
     aruco_dict="4X4_50",
     marker_size=0.055,  # metri (lato del quadrato nero!)
