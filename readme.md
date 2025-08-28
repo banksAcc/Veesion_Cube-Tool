@@ -62,12 +62,19 @@ Il PC, alla ricezione dell’input, scatta la foto (es. da camera industriale ti
 
 ## 🛠️ Software stack
 
-- **Firmware ESP32 (Arduino/ESP‑IDF)**: BLE GATT, gestione pulsanti, battery-awareness.  
+- **Firmware ESP32 (Arduino/ESP‑IDF)**: BLE GATT, gestione pulsanti, battery-awareness.
 - **PC App (Python)**:
   - **OpenCV** (ArUco, Charuco, solvePnP).
   - **Bleak** (BLE cross‑platform).
   - **Acquisizione camera**: OpenCV/SDK vendor.
   - CLI + opzione GUI minimale (in roadmap).
+
+## 👨‍💻 Classi firmware ESP32
+
+- `BleManager` – wrapper su NimBLE-Arduino per advertising, connessione e scambio messaggi.
+- `DisplayManager` – gestisce il display SSD1306 (stati, animazioni).
+- `LedManager` – controlla il LED RGB e i suoi effetti.
+- `Buttons` – debounce e rilevamento pressioni brevi/lunghe.
 
 ---
 
