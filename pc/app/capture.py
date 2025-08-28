@@ -19,7 +19,7 @@ import shutil
 import time
 import random
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 try:
     import cv2
@@ -67,38 +67,18 @@ class CameraCapture(BaseCapture):
         super().__init__(cfg)
         self.cam = None
 
-    def capture_loop(self, dest_dir: Path, freq_ms: int, stop_evt, log: Callable[[str], None]):
-        """Continuously grab frames from a camera and save them to *dest_dir*.
-
-        Works with generic webcams and industrial cameras such as Basler
-        when the appropriate drivers are installed.
-        """
+    def capture_loop(self, dest_dir: Path, freq_ms: int, stop_evt, log: Callable[[str, str], None]):
         if cv2 is None:
-            log("[CAPTURE] OpenCV not available: cannot use camera")
+            log("OpenCV not available: cannot use camera", "error")
             return
-        cam_type = str(self.cfg["capture"].get("camera_type", "webcam")).lower()
-        if cam_type == "webcam":
-            cam_id = int(self.cfg["capture"].get("camera_id", 0))
-            self.cam = cv2.VideoCapture(cam_id)
-            if not self.cam.isOpened():
-                log(f"[CAPTURE] Unable to open webcam id={cam_id}")
-                return
-            log(f"[CAPTURE] Webcam opened id={cam_id}, freq={freq_ms}ms")
-        elif cam_type == "ip":
-            cam_ip = self.cfg["capture"].get("camera_ip")
-            if not cam_ip:
-                log("[CAPTURE] camera_ip not set for IP camera")
-                return
-            self.cam = cv2.VideoCapture(str(cam_ip))
-            if not self.cam.isOpened():
-                log(f"[CAPTURE] Unable to open IP camera at {cam_ip}")
-                return
-            log(f"[CAPTURE] IP camera opened at {cam_ip}, freq={freq_ms}ms")
-        else:
-            cam_serial = self.cfg["capture"].get("camera_serial")
-            log(f"[CAPTURE] Unsupported camera_type={cam_type} (serial={cam_serial})")
+
+        cam_id = int(self.cfg["capture"].get("camera_id", 0))
+        self.cam = cv2.VideoCapture(cam_id)
+        if not self.cam.isOpened():
+            log(f"Failed to open camera id={cam_id}", "error")
             return
-       
+
+        log(f"Camera opened id={cam_id}, freq={freq_ms}ms", "info")
         period = max(0.001, freq_ms / 1000.0)
         next_t = time.perf_counter()
 
@@ -106,7 +86,7 @@ class CameraCapture(BaseCapture):
         while not stop_evt.is_set():
             ret, frame = self.cam.read()
             if not ret or frame is None:
-                log("[CAPTURE] Invalid frame (ret=False)")
+                log("Invalid frame (ret=False)", "warning")
             else:
                 idx += 1
                 ts = time.strftime("%Y%m%d_%H%M%S")
@@ -119,9 +99,7 @@ class CameraCapture(BaseCapture):
                 time.sleep(sleep)
 
         self.cam.release()
-        log("[CAPTURE] Camera released")
-
-
+        log("Camera released", "info")
 
 class PylonCapture(BaseCapture):
     """Capture backend using Basler's pypylon SDK."""
@@ -198,6 +176,7 @@ class PylonCapture(BaseCapture):
         self.cam.Close()
         log("[CAPTURE] Pylon camera rilasciata")
 
+
 class TestCapture(BaseCapture):
     """Simulated capture that replays a directory of still images.
 
@@ -212,11 +191,10 @@ class TestCapture(BaseCapture):
         self.src = Path(cfg["capture"].get("test_source_dir", "test_images"))
         self.shuffle = bool(cfg["capture"].get("shuffle_test_images", False))
 
-    def capture_loop(self, dest_dir: Path, freq_ms: int, stop_evt, log: Callable[[str], None]):
-        """Copy images from the source directory into *dest_dir* at the given rate."""
+    def capture_loop(self, dest_dir: Path, freq_ms: int, stop_evt, log: Callable[[str, str], None]):
         imgs = sorted([p for p in self.src.glob("*") if p.is_file()])
         if not imgs:
-            log(f"[CAPTURE] No images found in {self.src}")
+            log(f"No images in {self.src}", "error")
             return
 
         if self.shuffle:
@@ -230,24 +208,17 @@ class TestCapture(BaseCapture):
         pos = 0
         stop_on_exhausted = bool(self.cfg["capture"].get("stop_on_test_exhausted", False))
 
-        log(
-            f"[CAPTURE] Test mode: copying from {self.src}, freq={freq_ms}ms, "
-            f"stop_on_exhausted={stop_on_exhausted}, shuffle={self.shuffle}"
-        )
+        log(f"Test mode: copying from {self.src}, freq={freq_ms}ms, stop_on_exhausted={stop_on_exhausted}", "info")
 
         while not stop_evt.is_set():
             src_img = imgs[pos]
             pos += 1
             if pos >= len(imgs):
                 if stop_on_exhausted:
-                    log("[CAPTURE] Test images exhausted -> stop session")
+                    log("test images exhausted -> stop session", "info")
                     break
-                if self.shuffle:
-                    random.shuffle(imgs)
-                    log("[CAPTURE] Test images exhausted -> reshuffle and restart sequence")
-                else:
-                    log("[CAPTURE] Test images exhausted -> restart sequence")
-                pos = 0  # restart sequence
+                pos = 0  # restart from beginning
+                
             idx += 1
             ts = time.strftime("%Y%m%d_%H%M%S")
             fname = f"frame_{idx:06d}_{ts}.{self.image_format}"
@@ -257,11 +228,11 @@ class TestCapture(BaseCapture):
             try:
                 shutil.copy2(src_img, dst)
             except Exception as e:
-                log(f"[CAPTURE] copy error: {e}")
+                log(f"copy error: {e}", "error")
 
             next_t += period
             sleep = next_t - time.perf_counter()
             if sleep > 0:
                 time.sleep(sleep)
 
-        log("[CAPTURE] Test mode: loop terminated")
+        log("Test mode: loop finished", "info")

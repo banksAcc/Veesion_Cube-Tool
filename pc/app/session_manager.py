@@ -20,10 +20,14 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from capture import CameraCapture, TestCapture, PylonCapture
+from capture import CameraCapture, TestCapture
+from logger import get_logger
 
 FMT = "%Y-%m-%d_%H-%M-%S"  # readable and sortable
 
+session_logger = get_logger("SESSION")
+state_logger = get_logger("STATE")
+capture_logger = get_logger("CAPTURE")
 
 class Session:
     """Represent a single capture session on disk."""
@@ -37,19 +41,18 @@ class Session:
         self.start_dt = datetime.now()
         self.end_dt: Optional[datetime] = None
 
-        # initial directory marked as ongoing
+        # initial directory "ongoing"
+
         self.dir = root / f"session_{self.start_dt.strftime(FMT)}__ongoing"
         self.dir.mkdir(parents=True, exist_ok=True)
 
         self.stop_evt = threading.Event()
         self.thread: Optional[threading.Thread] = None
 
-        # per-session log file in the session directory
+        # simple per-session log file stored in the same folder
         self.session_log = self.dir / "session.log"
-        self._log(
-            f"[SESSION] start @ {self.start_dt.isoformat()} freq={self.freq_ms}ms simulate={not self.use_camera}"
-        )
-
+        self._log(f"start @ {self.start_dt.isoformat()} freq={self.freq_ms}ms use_camera={self.use_camera}")
+      
         # capture implementation
         if self.use_camera:
             cam_type = str(self.cfg["capture"].get("camera_type", "opencv")).lower()
@@ -60,11 +63,19 @@ class Session:
         else:
             self.capturer = TestCapture(self.cfg)
 
-    def _log(self, msg: str):
-        print(msg)
+    def _log(self, msg: str, level: str = "info"):
+        getattr(session_logger, level)(msg)
         try:
             with self.session_log.open("a", encoding="utf-8") as f:
-                f.write(msg + "\n")
+                f.write(f"[SESSION] {msg}\n")
+        except Exception:
+            pass
+
+    def log_capture(self, msg: str, level: str = "info"):
+        getattr(capture_logger, level)(msg)
+        try:
+            with self.session_log.open("a", encoding="utf-8") as f:
+                f.write(f"[CAPTURE] {msg}\n")
         except Exception:
             pass
 
@@ -72,7 +83,7 @@ class Session:
         """Spawn the capture thread."""
         self.thread = threading.Thread(
             target=self.capturer.capture_loop,
-            args=(self.dir, self.freq_ms, self.stop_evt, self._log),
+            args=(self.dir, self.freq_ms, self.stop_evt, self.log_capture),
             name=f"capture-{self.start_dt.strftime('%H%M%S')}",
             daemon=True,
         )
@@ -81,7 +92,7 @@ class Session:
     def stop(self):
         """Stop capture and rename directory with start and end timestamps."""
         self.end_dt = datetime.now()
-        self._log(f"[SESSION] stop @ {self.end_dt.isoformat()}")
+        self._log(f"stop @ {self.end_dt.isoformat()}")
         self.stop_evt.set()
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=5.0)
@@ -92,7 +103,7 @@ class Session:
             self.dir.rename(final_dir)
             self.dir = final_dir
         except Exception as e:
-            self._log(f"[SESSION] rename failed: {e}")
+            self._log(f"rename failed: {e}", level="error")
         return self.dir, self.start_dt, self.end_dt
 
 
@@ -114,31 +125,31 @@ class SessionManager:
         """Handle START messages from BLE by creating a new session."""
         async with self.lock:
             if self.current is not None:
-                print("[STATE] START received but session already active -> IGNORE (duplicate)")
+                state_logger.warning("START received but session already active -> IGNORE (duplicate)")
                 return
             simulate = bool(self.cfg["capture"].get("simulate_camera", False))
             use_camera = not simulate
             freq_ms = int(self.cfg["capture"].get("frequency_ms", 200))
             self.current = Session(self.output_root, freq_ms, use_camera, self.cfg)
             self.current.start()
-            print("[STATE] Capture session STARTED")
-
+            state_logger.info("Capture session STARTED")
+  
     async def handle_end_command(self):
         """Handle END messages by closing the current session."""
         async with self.lock:
             if self.current is None:
-                print("[STATE] END received but no active session -> IGNORE (duplicate)")
+                state_logger.warning("END received but no active session -> IGNORE (duplicate)")
                 return
             await self._stop_and_queue(self.current)
             self.current = None
-            print("[STATE] Capture session STOPPED and queued for pose")
+            state_logger.info("Capture session STOPPED and queued for pose")
 
     async def stop_session(self, reason: str = ""):
         """Force stop of the active session, providing a reason."""
         async with self.lock:
             if self.current is None:
                 return
-            print(f"[STATE] Stop session (reason={reason})")
+            state_logger.info(f"Stop session (reason={reason})")
             await self._stop_and_queue(self.current)
             self.current = None
 
@@ -147,9 +158,9 @@ class SessionManager:
         try:
             final_dir, start_dt, end_dt = session.stop()
         except Exception as e:
-            print(f"[SESSION] stop error: {e}")
+            session_logger.error(f"stop error: {e}")
             if not self.keep_on_error:
-                print("[SESSION] WARNING: keep_on_error=False but stop failed: NOT removing anything.")
+                session_logger.warning("keep_on_error=False but stop failed: NOT removing anything.")
             return
 
         # enqueue job for pose estimation

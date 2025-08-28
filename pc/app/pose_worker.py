@@ -4,6 +4,8 @@ import shutil
 from pathlib import Path
 from cube_minimal.cube_pose.api import estimate_cube_from_image
 
+from logger import get_logger
+
 try:
     import cv2
     import numpy as np
@@ -11,6 +13,7 @@ try:
 except Exception:
     cv2, np, HAS_CV = None, None, False
 
+log = get_logger("POSE")
 
 class PoseWorker:
     """Asynchronous worker that estimates cube pose for capture sessions."""
@@ -31,9 +34,9 @@ class PoseWorker:
     async def start(self):
         """Spawn worker tasks if pose estimation is enabled."""
         if not self.enabled:
-            print("[POSE] disabled")
+            log.info("disabled")
             return
-        print(f"[POSE] starting workers = {self.max_jobs}")
+        log.info(f"starting workers = {self.max_jobs}")
         for _ in range(self.max_jobs):
             self.tasks.append(asyncio.create_task(self._worker()))
 
@@ -53,7 +56,7 @@ class PoseWorker:
             try:
                 await asyncio.to_thread(self._process_session, job)
             except Exception as e:
-                print(f"[POSE] job error: {e}")
+                log.error(f"job error: {e}")
 
     def _process_session(self, job: dict):
         """Process a completed capture session and write results to JSON."""
@@ -65,7 +68,7 @@ class PoseWorker:
         method = self.cfg["pose"].get("method", "charuco").lower()
         out_json = self.output_root / f"{session_dir.name}_pose.json"
 
-        print(f"[POSE] Processing {session_dir.name} with method={method}")
+        log.info(f"Processing {session_dir.name} with method={method}")
 
         asyncio.run_coroutine_threadsafe(
             self.ble_queue.put("COMPUTATION START"), self.loop
@@ -104,13 +107,11 @@ class PoseWorker:
             if delete_frames and not debug:
                 try:
                     shutil.rmtree(session_dir)
-                    print(f"[POSE] {session_dir.name} removed (frames deleted)")
+                    log.info(f"{session_dir.name} deleted (frames removed)")
                 except Exception as e:
-                    print(f"[POSE] rmtree error: {e}")
+                    log.error(f"rmtree error: {e}")
             else:
-                print(
-                    f"[POSE] frames kept (delete_frames={delete_frames}, debug={debug})"
-                )
+                log.info(f"frames kept (delete_frames={delete_frames}, debug={debug})")
         finally:
             asyncio.run_coroutine_threadsafe(
                 self.ble_queue.put("COMPUTATION END"), self.loop
