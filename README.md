@@ -4,8 +4,10 @@ A compact hardware and software stack for estimating the pose of a 3D‑printed 
 An ESP32 inside the pen sends a BLE trigger; the PC listens for the event, grabs a frame from a camera and computes the pen pose from ArUco markers.
 
 ## Idea
-<img src="esp32/img/example_nobg_2.png" alt="Device" width="350"/>
-<img src="pc/captures/session_2025-08-28_13-39-13__2025-08-28_13-39-13/img_for_readme.png" alt="Cube After" width="350"/>
+<div style="display: flex; gap: 20px;">
+  <img src="esp32/img/example_nobg_2.png" alt="Device" width="400"/>
+  <img src="pc/captures/session_2025-08-28_13-39-13__2025-08-28_13-39-13/img_for_readme.png" alt="Cube After" width="400"/>
+</div>
 
 ## Hardware
 - ESP32 with BLE and two push buttons
