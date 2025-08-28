@@ -57,6 +57,7 @@ capture:
   tiff_compression: "lzw"    # optional
   test_source_dir: "test_images"
   stop_on_test_exhausted: false
+  shuffle_test_images: false   # optional: randomize order
   stop_on_ble_disconnect: true
   keep_session_frames_on_error: true
 
@@ -93,11 +94,13 @@ runtime:
 - Al **END** la sessione viene messa in coda per la **pose** (in parallelo puoi già iniziare un nuovo `START`).
 
 ### Cattura: Camera reale vs Test mode
-- **Camera reale**: `simulate_camera: false` → usa `camera_type` per selezionare la sorgente (`webcam`, `ip`, ecc.).
-- **Test mode**: `simulate_camera: true` → copia immagini da `test_source_dir` con cadenza `frequency_ms`.
-  Se finiscono:
-  - `stop_on_test_exhausted: true` ⇒ **termina** la sessione.
-  - `false` ⇒ **ricomincia** dall’inizio (ciclo).
+- **Camera reale**: `use_camera: true` → usa `cv2.VideoCapture(camera_id)`.
+- **Test mode**: `use_camera: false` → copia immagini da `test_source_dir` con cadenza `frequency_ms`.
+  Preparazione directory test:
+  - Inserisci nella cartella `test_source_dir` solo file immagine (sotto-cartelle ignorate).
+  - Di default le immagini sono lette in ordine alfabetico; imposta `shuffle_test_images: true` per miscelarle ad ogni ciclo.
+  - `stop_on_test_exhausted: true` ⇒ la sessione **termina** quando tutte le immagini sono state usate.
+  - `stop_on_test_exhausted: false` ⇒ il ciclo **ricomincia** dall’inizio (e rimescola se `shuffle_test_images` è attivo).
 
 Supporto **TIFF** con compressione opzionale LZW/Deflate, e **16-bit** (convertiti a 8-bit per ArUco).
 

@@ -1,5 +1,6 @@
 import shutil
 import time
+import random
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -181,18 +182,29 @@ class PylonCapture(BaseCapture):
         log("[CAPTURE] Pylon camera rilasciata")
 
 class TestCapture(BaseCapture):
-    """Simulated capture that copies pre-existing images at a fixed rate."""
+    """Simulated capture that replays a directory of still images.
+
+    Images are copied to the destination folder at the configured frequency.
+    The files are iterated sequentially or shuffled if ``shuffle_test_images``
+    is enabled. When the sequence is exhausted the loop restarts, unless
+    ``stop_on_test_exhausted`` is true.
+    """
 
     def __init__(self, cfg: dict):
         super().__init__(cfg)
         self.src = Path(cfg["capture"].get("test_source_dir", "test_images"))
+        self.shuffle = bool(cfg["capture"].get("shuffle_test_images", False))
 
     def capture_loop(self, dest_dir: Path, freq_ms: int, stop_evt, log: Callable[[str], None]):
         """Copy images from the source directory into *dest_dir* at the given rate."""
         imgs = sorted([p for p in self.src.glob("*") if p.is_file()])
         if not imgs:
-            log(f"[CAPTURE] No images in {self.src}")
+            log(f"[CAPTURE] No images found in {self.src}")
             return
+
+        if self.shuffle:
+            random.shuffle(imgs)
+            log("[CAPTURE] Test mode: shuffled source images")
 
         period = max(0.001, freq_ms / 1000.0)
         next_t = time.perf_counter()
@@ -202,7 +214,8 @@ class TestCapture(BaseCapture):
         stop_on_exhausted = bool(self.cfg["capture"].get("stop_on_test_exhausted", False))
 
         log(
-            f"[CAPTURE] Test mode: copying from {self.src}, freq={freq_ms}ms, stop_on_exhausted={stop_on_exhausted}"
+            f"[CAPTURE] Test mode: copying from {self.src}, freq={freq_ms}ms, "
+            f"stop_on_exhausted={stop_on_exhausted}, shuffle={self.shuffle}"
         )
 
         while not stop_evt.is_set():
@@ -210,15 +223,20 @@ class TestCapture(BaseCapture):
             pos += 1
             if pos >= len(imgs):
                 if stop_on_exhausted:
-                    log("[CAPTURE] test images exhausted -> stop session")
+                    log("[CAPTURE] Test images exhausted -> stop session")
                     break
-                pos = 0  # restart
-
+                if self.shuffle:
+                    random.shuffle(imgs)
+                    log("[CAPTURE] Test images exhausted -> reshuffle and restart sequence")
+                else:
+                    log("[CAPTURE] Test images exhausted -> restart sequence")
+                pos = 0  # restart sequence
             idx += 1
             ts = time.strftime("%Y%m%d_%H%M%S")
             fname = f"frame_{idx:06d}_{ts}.{self.image_format}"
             dst = dest_dir / fname
 
+            log(f"[CAPTURE] Copying {src_img.name} -> {fname}")
             try:
                 shutil.copy2(src_img, dst)
             except Exception as e:
@@ -229,4 +247,4 @@ class TestCapture(BaseCapture):
             if sleep > 0:
                 time.sleep(sleep)
 
-        log("[CAPTURE] Test mode: loop finished")
+        log("[CAPTURE] Test mode: loop terminated")
