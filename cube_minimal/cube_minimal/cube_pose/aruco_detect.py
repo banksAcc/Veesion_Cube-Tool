@@ -25,8 +25,11 @@ class MarkerDetection:
 
 def make_detector(dict_name: str) -> cv.aruco.ArucoDetector:
     """Create an ArUco detector from the dictionary name."""
-
-    d = cv.aruco.getPredefinedDictionary(DICT_MAP[dict_name])
+    try:
+        d = cv.aruco.getPredefinedDictionary(DICT_MAP[dict_name])
+    except KeyError as exc:
+        valid = ", ".join(sorted(DICT_MAP.keys()))
+        raise ValueError(f"Unknown dictionary '{dict_name}'. Valid options: {valid}") from exc
     p = cv.aruco.DetectorParameters()
     return cv.aruco.ArucoDetector(d, p)
 

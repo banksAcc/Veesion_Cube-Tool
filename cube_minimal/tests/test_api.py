@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from cube_pose.api import estimate_cube_from_image
+from cube_minimal.cube_pose import estimate_cube_from_image
 
 
 def test_nonexistent_image_path_raises():

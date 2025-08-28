@@ -1,12 +1,7 @@
-import sys
-from pathlib import Path
 import pytest
 import cv2 as cv
 
-# Add src directory to path for imports
-sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
-
-from cube_pose.aruco_detect import make_detector, DICT_MAP
+from cube_minimal.cube_pose.aruco_detect import DICT_MAP, make_detector
 
 
 def test_make_detector_valid():

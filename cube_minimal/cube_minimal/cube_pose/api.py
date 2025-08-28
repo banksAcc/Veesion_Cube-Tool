@@ -55,13 +55,15 @@ def estimate_cube_from_image(
 
     Raises
     ------
+    FileNotFoundError
+        If ``image_or_path`` is a string and the image cannot be read.
     ValueError
-        If the image cannot be read or no markers are detected.
+        If ``image_or_path`` is not a valid BGR array or no markers are detected.
 
     Example
     -------
     ```python
-    from cube_minimal.cube_pose.api import estimate_cube_from_image
+    from cube_minimal.cube_pose import estimate_cube_from_image
     result = estimate_cube_from_image(
         "frame.tiff", "calib.npz", "4X4_50", 0.055, 0.060
     )
@@ -72,10 +74,15 @@ def estimate_cube_from_image(
     if isinstance(image_or_path, str):
         img = cv.imread(image_or_path)
         if img is None:
-            raise ValueError(f"Unable to read image: {image_or_path}")
+            raise FileNotFoundError(f"Unable to read image: {image_or_path}")
     else:
         img = image_or_path
-        if img is None or not isinstance(img, np.ndarray) or img.ndim != 3:
+        if (
+            img is None
+            or not isinstance(img, np.ndarray)
+            or img.ndim != 3
+            or img.shape[2] != 3
+        ):
             raise ValueError("image_or_path must be a path or BGR np.ndarray (H,W,3).")
 
     # Camera
