@@ -72,7 +72,7 @@ python -m cube_minimal.cli.estimate_one   --image cube_minimal/img/your_image.ti
 ## License
 All rights reserved.
 
-This software and all associated files are the exclusive property of <Angelo Milella - COMAU>.
+This software and all associated files are the exclusive property of Angelo Milella - COMAU.
 Unauthorized copying, modification, distribution, or use of this software, via any medium, is strictly prohibited.
 
 For inquiries about licensing, please contact: <angelo_milella_dev@yahoo.com>.

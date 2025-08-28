@@ -1,4 +1,4 @@
-# ArUco Pen Pose Tool
+# Veesion Cube Tool
 
 A compact hardware and software stack for estimating the pose of a 3D‑printed pen tip.  
 An ESP32 inside the pen sends a BLE trigger; the PC listens for the event, grabs a frame from a camera and computes the pen pose from ArUco markers.
@@ -53,7 +53,7 @@ Captured frames appear under `pc/captures/` and are processed by the pose worker
 ## License
 All rights reserved.
 
-This software and all associated files are the exclusive property of <Angelo Milella - COMAU>.
+This software and all associated files are the exclusive property of Angelo Milella - COMAU.
 Unauthorized copying, modification, distribution, or use of this software, via any medium, is strictly prohibited.
 
 For inquiries about licensing, please contact: <angelo_milella_dev@yahoo.com>.
