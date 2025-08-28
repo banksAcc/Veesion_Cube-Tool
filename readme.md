@@ -207,8 +207,16 @@ python app/main.py   --ble-name ARU-PEN   --camera 0   --dict DICT_4X4_50   --ma
 ## 🧪 Test & Debug
 
 - **Modalità test** senza BLE: `--test-mode` → scatti manuali (tasto o timer).  
-- **Overlay**: disegna assi, ID marker, reprojection error medio.  
+- **Overlay**: disegna assi, ID marker, reprojection error medio.
 - **Log**: CSV con posa e residui PnP.
+
+### Esecuzione dei test
+
+I test unitari sono gestiti con `pytest`:
+
+```bash
+pytest
+```
 
 ---
 
