@@ -1,3 +1,18 @@
+"""Session orchestration and capture strategy selection.
+
+This module exposes :class:`SessionManager`, which reacts to BLE commands and
+starts or stops capture sessions.  Each :class:`Session` chooses a concrete
+capture backend according to ``cfg['capture']['use_camera']``:
+
+* ``True`` → :class:`CameraCapture` reads frames from a physical camera (webcam
+  or Basler via ``pypylon`` when integrated).
+* ``False`` → :class:`TestCapture` replays static images from
+  ``test_source_dir`` for deterministic runs.
+
+The flag is typically set in ``pc/app/config.yaml`` and allows developers to
+switch between real hardware and test data without code changes.
+"""
+
 import asyncio
 import shutil
 import threading
