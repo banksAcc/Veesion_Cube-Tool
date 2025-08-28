@@ -15,7 +15,8 @@ Mini-moduli riutilizzabili per:
 from cube_minimal.src.cube_pose.api import estimate_cube_from_image
 
 res = estimate_cube_from_image(
-    image_or_path="cube_minimal/img/frame.tiff",
+    image_or_path="example_1.png",
+    sample_dir="cube_minimal/data/sample_dataset",
     camera_npz="cube_minimal/config/calib_data.npz",
     aruco_dict="4X4_50",
     marker_size=0.055,  # metri (lato del quadrato nero!)
@@ -33,8 +34,8 @@ img  = res["overlay"]
 
 ## CLI di esempio 1
 
-```
-python -m cube_minimal.src.cli.estimate_one   --image cube_minimal/img/your_image.tiff   --camera cube_minimal/config/calib_data.npz   --aruco_dict 4X4_50   --marker_size 0.055   --cube_size 0.060   --pair_strategy first   --out overlay.png --show
+```bash
+python -m cube_minimal.src.cli.estimate_one   --image example_1.png   --sample-dir cube_minimal/data/sample_dataset   --camera cube_minimal/config/calib_data.npz   --aruco_dict 4X4_50   --marker_size 0.055   --cube_size 0.060   --pair_strategy first   --out overlay.png --show
 ```
 
 ## CLI di esempio 2

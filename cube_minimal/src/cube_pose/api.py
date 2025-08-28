@@ -3,6 +3,7 @@ API di alto livello per stimare la posa del cubo da una singola immagine.
 """
 
 from typing import Dict, Any, Union
+import os
 import numpy as np
 import cv2 as cv
 
@@ -19,6 +20,7 @@ def estimate_cube_from_image(
     cube_size: float,
     pair_strategy: str = "first",
     return_overlay: bool = False,
+    sample_dir: str | None = None,
 ) -> Dict[str, Any]:
     """
     Stima la posa del cubo a partire da 1 immagine.
@@ -31,6 +33,7 @@ def estimate_cube_from_image(
         cube_size: lato del cubo (metri)
         pair_strategy: "first" (primi due marker) o "max_angle"
         return_overlay: se True, ritorna anche un'immagine BGR con overlay (wireframe/assi)
+        sample_dir: cartella opzionale dove cercare l'immagine se il path è relativo
 
     Returns:
         dict con:
@@ -45,9 +48,14 @@ def estimate_cube_from_image(
     """
     # Carica immagine
     if isinstance(image_or_path, str):
-        img = cv.imread(image_or_path)
+        path = image_or_path
+        if sample_dir and not os.path.isabs(path) and not os.path.exists(path):
+            cand = os.path.join(sample_dir, path)
+            if os.path.exists(cand):
+                path = cand
+        img = cv.imread(path)
         if img is None:
-            raise ValueError(f"Immagine non leggibile: {image_or_path}")
+            raise ValueError(f"Immagine non leggibile: {path}")
     else:
         img = image_or_path
         if img is None or not isinstance(img, np.ndarray) or img.ndim != 3:
