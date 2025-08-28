@@ -149,6 +149,11 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r app/requirements.txt
 ```
 
+Nel file `pc/app/config.yaml` scegli il backend di acquisizione:
+- `camera_type: "opencv"` per webcam/UVC (`camera_id`).
+- `camera_type: "pylon"` per camere Basler (`camera_serial` o `camera_ip`).
+- `use_camera: false` abilita la modalità test (immagini da cartella).
+
 ### 3) Calibrazione camera
 - Stampa una **Charuco** (consigliata) o chessboard.  
 - Usa lo script (da fornire in `pc/app/`) per:
