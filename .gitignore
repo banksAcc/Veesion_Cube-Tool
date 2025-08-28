@@ -132,6 +132,7 @@ cython_debug/
 
 # Dataset & Captures
 dataset
+captures
 
 # ENV
 .vscode
