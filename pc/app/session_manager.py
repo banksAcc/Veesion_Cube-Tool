@@ -32,7 +32,7 @@ class Session:
         # per-session log file in the session directory
         self.session_log = self.dir / "session.log"
         self._log(
-            f"[SESSION] start @ {self.start_dt.isoformat()} freq={self.freq_ms}ms use_camera={self.use_camera}"
+            f"[SESSION] start @ {self.start_dt.isoformat()} freq={self.freq_ms}ms simulate={not self.use_camera}"
         )
 
         # capture implementation
@@ -101,7 +101,8 @@ class SessionManager:
             if self.current is not None:
                 print("[STATE] START received but session already active -> IGNORE (duplicate)")
                 return
-            use_camera = bool(self.cfg["capture"].get("use_camera", True))
+            simulate = bool(self.cfg["capture"].get("simulate_camera", False))
+            use_camera = not simulate
             freq_ms = int(self.cfg["capture"].get("frequency_ms", 200))
             self.current = Session(self.output_root, freq_ms, use_camera, self.cfg)
             self.current.start()

@@ -53,7 +53,30 @@ pip install cube-minimal
 - With known 3D coordinates of cube corners the pose is recovered via
   `solvePnP`.
 
-### Tip Offset
+### Example configurations
+
+`pc/app/config.yaml` supports several camera setups:
+
+```yaml
+capture:
+  # Use a local webcam
+  camera_type: "webcam"
+  camera_id: 0
+
+  # Industrial camera by serial number
+  # camera_type: "basler"
+  # camera_serial: "40012345"
+
+  # Or connect to a network camera
+  # camera_type: "ip"
+  # camera_ip: "rtsp://192.168.0.10/stream"
+
+  # Enable simulation using images from a folder
+  simulate_camera: true
+  test_source_dir: "../image_to_be_used"
+```
+
+---
 
 - Define the rigid transform `T_cube->tip` (offset in cube frame).
 - Tip pose in camera frame: `p_tip = R_cube * offset + t_cube`.

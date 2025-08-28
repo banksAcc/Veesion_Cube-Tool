@@ -26,51 +26,109 @@ calib/                  # sample calibration data
 captures/               # session output
 ```
 
-## Installation
+### Installazione
+Consigliato **virtual env**:
+```powershell
+# Windows PowerShell nella cartella pc_app/
+py -m venv .venv
+. .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+> Requisiti principali: `bleak`, `PyYAML`, `opencv-contrib-python`, `numpy`.
 
-```bash
-cd pc
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r app/requirements.txt
+### Configurazione (`config.yaml`)
+Esempio:
+```yaml
+ble:
+  name_prefix: "ESP32-RGB-BLE"
+  addr: null
+  scan_timeout: 8.0
+
+capture:
+  frequency_ms: 200
+  output_root: "captures"
+  simulate_camera: false       # true = test mode (uses images from a folder)
+  camera_type: "webcam"       # "webcam", "ip", etc.
+  camera_id: 0
+  camera_serial: null
+  camera_ip: null
+  image_format: "jpg"        # supported: jpg/png/tif/tiff
+  jpeg_quality: 90
+  tiff_compression: "lzw"    # optional
+  test_source_dir: "test_images"
+  stop_on_test_exhausted: false
+  stop_on_ble_disconnect: true
+  keep_session_frames_on_error: true
+
+pose:
+  enabled: true
+  method: "charuco"          # oppure "custom" (stub)
+  max_parallel_jobs: 3
+  delete_frames_after_processing: true
+  results_format: "json"
+  charuco:
+    dictionary: "DICT_4X4_50"
+    squares_x: 5
+    squares_y: 7
+    square_length_mm: 30.0
+    marker_length_mm: 22.0
+  camera_calibration_npz: "calibration.npz"
+  # opzionale: se il .npz usa chiavi diverse
+  calib_keys:
+    K: "cameraMatrix"
+    D: "distCoeffs"
+
+runtime:
+  debug: true
+  log_to_file: false
 ```
 
-Key dependencies: `bleak`, `PyYAML`, `opencv-contrib-python`, `numpy`.
+### Esecuzione
+- Accendi l’ESP32 (parte già in **advertising**).
+- Avvia la app:
+  ```powershell
+  python app.py
+  ```
+- Premi **BTN16**: `START` all’**inizio** della pressione, `END` al **rilascio**.
+- Al **END** la sessione viene messa in coda per la **pose** (in parallelo puoi già iniziare un nuovo `START`).
 
-## Configuration
+### Cattura: Camera reale vs Test mode
+- **Camera reale**: `simulate_camera: false` → usa `camera_type` per selezionare la sorgente (`webcam`, `ip`, ecc.).
+- **Test mode**: `simulate_camera: true` → copia immagini da `test_source_dir` con cadenza `frequency_ms`.
+  Se finiscono:
+  - `stop_on_test_exhausted: true` ⇒ **termina** la sessione.
+  - `false` ⇒ **ricomincia** dall’inizio (ciclo).
 
-Edit `app/config.yaml` to set the BLE device name or address, capture
-frequency, camera ID (use 0 for default or the index for a Basler camera), and
-other options such as image format or test mode.
+Supporto **TIFF** con compressione opzionale LZW/Deflate, e **16-bit** (convertiti a 8-bit per ArUco).
 
-## Usage
+### Stima di posa (ChArUco)
+- Richiede **OpenCV contrib**.
+- Parametri: `squares_x`, `squares_y` (numero di quadretti), `square_length_mm` (lato quadretto), `marker_length_mm` (lato marker ArUco).
+- Calibrazione **camera** via `.npz`:
+  - chiavi supportate: `camera_matrix`/`cameraMatrix`/`K`/`mtx` e `dist_coeffs`/`distCoeffs`/`D`/`dist` (configurabili con `calib_keys`).
+- Output per frame: `ok`, `rvec`, `tvec`, `num_charuco`, `reproj_err`.  
+  > `rvec`/`tvec` sono la posa **board→camera** (Rodrigues + traslazione, unità mm se la board è in mm).
 
-1. Power the ESP32 so it starts advertising.
-2. Launch the application:
-   ```bash
-   python app/app.py
-   ```
-3. Press the event button: `START` on press, `END` on release. After `END` the
-   session is queued for pose computation while you can start a new one.
+### Formato output & naming
+- Sessioni salvate in:  
+  `captures/session_YYYY-mm-dd_HH-MM-SS__YYYY-mm-dd_HH-MM-SS/`
+- Risultati posa:  
+  `captures/session_..._pose.json`
+- Se `delete_frames_after_processing=true` **e** `runtime.debug=false` ⇒ i frame della sessione vengono **rimossi** dopo il calcolo (lo JSON rimane).
 
-### Capture Modes
+### Logging & Debug
+- Ogni sessione ha un **`session.log`** nella propria cartella.
+- Logging su console; opzionalmente un log globale con `runtime.log_to_file: true` (puoi estendere facilmente con `logging` modulare).
+- Stato incoerente (START/START, END/END) segnalato in console (non interrompe la pipeline).
 
-- **Real camera**: `use_camera: true` → uses `cv2.VideoCapture` (Basler and
-  generic webcams).
-- **Test mode**: `use_camera: false` → copies images from `test_source_dir` at
-  the configured rate.
+### Troubleshooting
+- **BLE non si connette**: spegni/riaccendi Bluetooth di sistema; chiudi app concorrenti (es. nRF Connect). Su Windows, lo script imposta automaticamente la **WindowsSelectorEventLoopPolicy**.
+- **Non trova l’ESP**: usa `ble.addr` nel `config.yaml` (indirizzo stampato lato ESP su seriale) oppure aumenta `scan_timeout`.
+- **Camera**: prova `camera_id: 1/2`; verifica di non avere la webcam occupata da altre app.
+- **no_calibration**: controlla che il `.npz` contenga le chiavi giuste o usa `pose.calib_keys` per mappare i nomi (`cameraMatrix`, `distCoeffs`, ecc.).
+- **Prestazioni**: TIFF/16-bit e risoluzioni elevate rallentano la detection; valuta downscale o JPEG qualità alta.
 
-### Pose Estimation
+---
 
-Pose results are written as JSON in the session directory. When
-`delete_frames_after_processing` is `true` and `runtime.debug` is `false`, the
-frames are removed after processing.
-
-### Logging
-
-Each session contains a `session.log` file with basic diagnostics. A global log
-file can be enabled via `runtime.log_to_file`.
-
-## License
-
-MIT License.
+## Licenza
+MIT
