@@ -15,6 +15,22 @@ Il PC, alla ricezione dell’input, scatta la foto (es. da camera industriale ti
 
 ---
 
+## Installazione
+
+Per installare i moduli Python localmente:
+
+```bash
+pip install .
+```
+
+Oppure, dopo la pubblicazione su PyPI:
+
+```bash
+pip install cube-minimal
+```
+
+---
+
 ## 🧱 Architettura
 
 1. **Utente preme un tasto** sulla penna (ESP32).
