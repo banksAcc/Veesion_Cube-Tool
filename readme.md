@@ -1,272 +1,109 @@
-# ArUco Pen Pose — sistema penna+marker ArUco con trigger BLE e stima di posa
+# ArUco Pen Pose — BLE-triggered capture and pose estimation
 
-Sistema hardware/software per acquisire foto sincronizzate dal PC tramite trigger BLE inviato da un **ESP32** integrato in una **penna 3D** con un piccolo **cubo** stampato in 3D che monta **3/4 marker ArUco**.  
-Il PC, alla ricezione dell’input, scatta la foto (es. da camera industriale tipo Basler o webcam), **stima la posa della punta** della penna e la espone per uso real‑time o per logging. In roadmap è prevista la **replicazione della posa** con un **braccio robotico**.
+This project provides a hardware and software stack to capture images and
+estimate the pose of a 3D printed pen tip equipped with ArUco markers. An
+ESP32 inside the pen sends a BLE trigger to the PC, which then acquires an
+image from a camera (industrial cameras such as **Basler** or any webcam are
+supported) and computes the pose of the pen tip relative to the camera.
 
----
+## TL;DR
 
-## ✨ TL;DR
+- **Hardware**: 3D pen with a cube carrying ArUco markers and an ESP32 BLE
+  trigger.
+- **ESP32**: sends BLE notification to the PC when a button is pressed.
+- **PC App**: receives the trigger, captures an image, detects ArUco markers
+  and uses `solvePnP` to calculate the pen tip pose.
+- **Output**: pose in the `camera_frame` and optional conversion to
+  `world_frame` or `robot_frame`.
 
-- **Hardware**: penna 3D + cubo con marker ArUco + ESP32 (BLE) + pulsanti.  
-- **ESP32**: invia trigger BLE → PC.  
-- **PC App**: riceve trigger → scatta foto → detect ArUco → `solvePnP` → calcola posa della **punta** (offset noto dal cubo).  
-- **Output**: posa in `camera_frame` + conversione opzionale in `world/robot_frame`.  
-- **Roadmap**: streaming continuo, calibrazione semplificata, integrazione robot.
-
----
-
-## Installazione
-
-Per installare i moduli Python localmente:
+## Installation
 
 ```bash
 pip install .
-```
-
-Oppure, dopo la pubblicazione su PyPI:
-
-```bash
+# or from PyPI
 pip install cube-minimal
 ```
 
----
+## Architecture
 
-## 🧱 Architettura
+1. User presses a button on the pen (ESP32).
+2. ESP32 publishes a BLE event.
+3. The PC BLE listener receives the event and triggers image capture.
+4. The PC vision pipeline:
+   - Detects ArUco markers (configurable dictionary).
+   - Reconstructs the cube pose with `cv::solvePnP`.
+   - Applies the known rigid transform from cube center to pen tip.
+5. Output: pen tip position/orientation and timestamp.
+6. (Future) forward the pose to a robotic arm controller.
 
-1. **Utente preme un tasto** sulla penna (ESP32).
-2. **ESP32 pubblica un evento BLE** (notifica/char write).
-3. **PC Listener BLE** riceve l’evento → **trigga** la cattura immagine.
-4. **PC Vision**:
-   - Detect **ArUco** (dictionary configurabile).
-   - Ricostruisce la posa del **cubo** con `cv::solvePnP`.
-   - Applica la **trasformazione rigida** nota dal centro del cubo alla **punta** della penna.
-5. **Output**: posizione/orientamento punta + timestamp + immagine (opzionale).
-6. **(Futuro)** Invio posa al **controller del braccio robotico**.
+## Bill of Materials
 
----
+- ESP32 with BLE (e.g. ESP32‑WROOM)
+- LiPo battery and switch
+- Two buttons (trigger / function)
+- 3D printed pen body and cube for 3–4 ArUco markers
+- Camera: webcam or industrial camera such as **Basler**
+- Charuco or chessboard for camera calibration
 
-## 🧩 Bill of Materials (BoM)
+## Key Concepts
 
-- **ESP32** con BLE (es. ESP32‑WROOM).  
-- **Batteria LiPo** + interruttore.  
-- **2 pulsanti** (scatto / funzione).  
-- **Penna 3D** o corpo stampato.  
-- **Cubo 3D** (stampa PLA/ABS) con sedi per **3–4 marker ArUco**.  
-- **Camera**: webcam UVC o camera industriale (es. Basler) + illuminazione diffusa.  
-- **Charuco o chessboard** per **calibrazione camera**.
+### Markers & Pose
 
----
+- ArUco markers placed on a cube; at least three must be visible.
+- With known 3D coordinates of cube corners the pose is recovered via
+  `solvePnP`.
 
-## 🧠 Concetti chiave
+### Tip Offset
 
-### Marker & Posa
-- Marker ArUco su un **cubo**: ogni faccia ospita un marker (almeno 3 visibili).  
-- Dato l’elenco di corner 2D ↔ punti 3D noti, si usa `solvePnP` per ottenere **R, t** del cubo rispetto alla camera.
+- Define the rigid transform `T_cube->tip` (offset in cube frame).
+- Tip pose in camera frame: `p_tip = R_cube * offset + t_cube`.
 
-### Offset fino alla **punta**
-- Misura/definisci una **trasformazione rigida** `T_cubo→punta` (vettore offset 3D nel frame del cubo).  
-- La posa della punta nel frame camera:  
-  `p_punta_cam = R_cubo_cam * p_offset_cubo + t_cubo_cam`  
-- L’orientamento della penna può essere definito da un asse del cubo o da 2–3 punti di riferimento.
+### Frames
 
-### Sistemi di riferimento
-- `camera_frame`: output primario.  
-- `world_frame` (opzionale): fissa una board a vista; stima `T_camera→world` per trasformare la punta nel mondo.  
-- `robot_frame` (futuro): nota `T_world→robot`, trasferisci la posa al braccio.
+- `camera_frame`: primary output
+- `world_frame` (optional): estimated from a visible board
+- `robot_frame` (future): known `T_world->robot` for robot control
 
----
+## Software Stack
 
-## 🛠️ Software stack
+- **ESP32 firmware** (Arduino/NimBLE): BLE GATT, button handling, battery
+  awareness
+- **PC application** (Python):
+  - OpenCV (ArUco, Charuco, solvePnP)
+  - Bleak for BLE
+  - Camera capture via OpenCV or vendor SDKs (e.g. Basler pypylon)
 
-- **Firmware ESP32 (Arduino/ESP‑IDF)**: BLE GATT, gestione pulsanti, battery-awareness.
-- **PC App (Python)**:
-  - **OpenCV** (ArUco, Charuco, solvePnP).
-  - **Bleak** (BLE cross‑platform).
-  - **Acquisizione camera**: OpenCV/SDK vendor.
-  - CLI + opzione GUI minimale (in roadmap).
-
-## 👨‍💻 Classi firmware ESP32
-
-- `BleManager` – wrapper su NimBLE-Arduino per advertising, connessione e scambio messaggi.
-- `DisplayManager` – gestisce il display SSD1306 (stati, animazioni).
-- `LedManager` – controlla il LED RGB e i suoi effetti.
-- `Buttons` – debounce e rilevamento pressioni brevi/lunghe.
-
----
-
-## 📦 Struttura del repository
+## Repository Structure
 
 ```
-aru-pen-pose/
-├─ esp32/
-│  ├─ src/
-│  └─ platformio.ini (o Arduino .ino)
-├─ pc/
-│  ├─ app/
-│  │  ├─ main.py
-│  │  ├─ ble_listener.py
-│  │  ├─ camera.py
-│  │  ├─ aruco_pose.py
-│  │  ├─ tip_transform.yaml     # offset cubo→punta
-│  │  └─ config.yaml
-│  ├─ calib/
-│  │  ├─ charuco_dict.yaml
-│  │  ├─ camera_intrinsics.yaml
-│  │  └─ camera_distortion.yaml
-│  └─ requirements.txt
-├─ stl/
-│  ├─ cube_mount.stl
-│  └─ pen_body.stl
-├─ dataset/
-│  └─ README.md
-├─ docs/
-│  ├─ aruco_layout.pdf
-│  └─ protocol_ble.md
-└─ README.md
-```
 
----
+aruco-pen-pose/
+├─ esp32/                # ESP32 firmware
+├─ pc/                   # PC application
+├─ stl/                  # 3D printable parts
+└─ readme.md             # this file
 
-## 📚 Dataset
+## Quick Start
 
-I dataset utilizzati per la calibrazione o per l'addestramento non sono inclusi nel repository. Scaricali dalle fonti indicate nei rilasci del progetto e posizionali nella cartella `dataset/`. Consulta `dataset/README.md` per dettagli sul formato (immagini, file `.npz`).
+1. **ESP32 firmware**: open `esp32/` with Arduino IDE or PlatformIO, configure
+   BLE device name and UUIDs in `config.h` and upload.
+2. **PC App**:
+   ```bash
+   cd pc
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install -r app/requirements.txt
+   ```
+3. **Camera calibration**: print a Charuco or chessboard and run the provided
+   script to compute `camera_intrinsics.yaml` and `camera_distortion.yaml`.
+4. **Tip transform**: measure or estimate the offset from cube center to pen
+   tip and store it in `tip_transform.yaml`.
+5. **Run**:
+   ```bash
+   python app/app.py --ble-name ARU-PEN --camera 0 --dict DICT_4X4_50 --marker-size-mm 20.0
+   ```
 
----
+## License
 
-## 🚀 Setup rapido
+MIT License. See individual folders for further details.
 
-### 1) Firmware ESP32
-- Apri `firmware/esp32/` (Arduino IDE o PlatformIO).  
-- Configura **device name BLE** e UUID delle caratteristiche in `config.h`.  
-- Carica sul dispositivo.  
-- Pulsante `SCATTO` → invia **notifica** BLE.
-
-### 2) PC App (Python 3.10+)
-```bash
-cd pc
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r app/requirements.txt
-```
-
-Nel file `pc/app/config.yaml` scegli il backend di acquisizione:
-- `camera_type: "opencv"` per webcam/UVC (`camera_id`).
-- `camera_type: "pylon"` per camere Basler (`camera_serial` o `camera_ip`).
-- `use_camera: false` abilita la modalità test (immagini da cartella).
-
-### 3) Calibrazione camera
-- Stampa una **Charuco** (consigliata) o chessboard.  
-- Usa lo script (da fornire in `pc/app/`) per:
-  - raccogliere immagini,
-  - stimare **intrinseci** e **distorsioni** (`camera_intrinsics.yaml`, `camera_distortion.yaml`).
-
-### 4) Definizione offset cubo→punta
-- Misura in CAD o empiricamente l’offset 3D dal **frame del cubo** alla **punta**.  
-- Salva in `tip_transform.yaml`, es.:
-  ```yaml
-  tip_offset_mm: [0.0, 15.2, -38.5]   # x,y,z nel frame del cubo
-  ```
-
-### 5) Avvio
-```bash
-python app/main.py   --ble-name ARU-PEN   --camera 0   --dict DICT_4X4_50   --marker-size-mm 20.0
-```
-
----
-
-## 🔗 Protocollo BLE (proposta)
-
-- **Service UUID**: `12345678-0000-0000-0000-1234567890ab`  
-- **Characteristic (Notify)**: `12345678-0000-0000-0000-1234567890ac`  
-- **Payload (little‑endian)**:
-  ```
-  u8 event_type   # 0x01 = TRIGGER
-  u32 tick_ms
-  u8 battery_pct
-  u8 button_id    # 1=SCATTO, 2=ALTRO
-  ```
-- Il PC sottoscrive la characteristic → ad ogni notifica esegue `capture()`.
-
----
-
-## 🎯 Rilevamento ArUco & PnP
-
-- **Dictionary**: `DICT_4X4_50` (default, configurabile).  
-- **Dimensioni marker**: es. 20 mm (definisci esatto in `--marker-size-mm`).  
-- **Punti 3D**: definisci i corner nel **frame del cubo** (per ogni faccia montata).  
-- **solvePnP**: `cv::solvePnP(objectPoints, imagePoints, K, dist, R, t)`.  
-- **Punta**: `p_punta = R * offset + t`.  
-- **Output**: JSON su stdout o su socket:
-  ```json
-  {
-    "ts": 1723545600.123,
-    "tip_position_camera_mm": [x, y, z],
-    "tip_orientation_Rvec": [rx, ry, rz],
-    "visibility_markers": 3,
-    "image_path": "captures/2025-08-13_17-22-10.png"
-  }
-  ```
-
----
-
-## 🧪 Test & Debug
-
-- **Modalità test** senza BLE: `--test-mode` → scatti manuali (tasto o timer).  
-- **Overlay**: disegna assi, ID marker, reprojection error medio.
-- **Log**: CSV con posa e residui PnP.
-
-### Esecuzione dei test
-
-I test unitari sono gestiti con `pytest`:
-
-```bash
-pytest
-```
-
----
-
-## 🤖 Integrazione robot (roadmap)
-
-- Pubblica la posa su **ROS 2** o ZeroMQ.  
-- Definisci `T_camera→world` (board fissa) e `T_world→robot`.  
-- Implementa **filtro** (Kalman/EMA) e **rate limiter**.  
-- Aggiungi **hand‑eye calibration** se la camera è sul polso del robot.
-
----
-
-## 📐 Consigli meccanici
-
-- Mantieni **rigide** le distanze cubo↔punta.  
-- Allinea una faccia del cubo all’asse della penna per ridurre ambiguità.  
-- Evita riflessi sui marker (stampa opaca / adesivi matte).
-
----
-
-## 🔒 Sicurezza & uso
-
-- Evita puntamento verso occhi (punta): **DPI** se necessario.  
-- Assicurati che il robot lavori in area sicura (interlock, e‑stop).  
-- Logga sempre gli errori di detection e i fallimenti PnP.
-
----
-
-## 📜 Licenza
-
-MIT (o altra a tua scelta). Inserisci il file `LICENSE`.
-
----
-
-## 🗺️ Roadmap
-
-- [ ] GUI minimale per preview e conferma scatto  
-- [ ] Streaming posa a 30 FPS (modalità continua)  
-- [ ] Autocalibrazione offset cubo→punta da 3 pose note  
-- [ ] Integrazione ROS 2 / MoveIt  
-- [ ] Test multi-camera e fusion
-
----
-
-## 🤝 Contributi
-
-PR e issue benvenuti. Apri una issue con:
-- log, versione, OS, camera usata, foto esempio, file di calibrazione.
