@@ -20,7 +20,7 @@ capture:
   keep_session_frames_on_error: true # if stop/rename fails, keep session frames
 pose:
   enabled: true
-  method: "charuco"                # "charuco" | "custom"
+  method: "cube"                   # "cube" | "custom"
   max_parallel_jobs: 3             # 3 is fine (CPU permitting)
   delete_frames_after_processing: true
   results_format: "json"           # json (recommended)
