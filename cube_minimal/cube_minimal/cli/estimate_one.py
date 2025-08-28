@@ -22,6 +22,7 @@ from cube_minimal.cube_pose.api import estimate_cube_from_image
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--image", required=True)
+    ap.add_argument("--sample-dir", default=None, help="cartella con immagini di esempio")
     ap.add_argument("--camera", required=True)
     ap.add_argument("--aruco_dict", default="4X4_50")
     ap.add_argument("--marker_size", type=float, required=True)
@@ -39,6 +40,7 @@ def main():
         cube_size=args.cube_size,
         pair_strategy=args.pair_strategy,
         return_overlay=bool(args.out or args.show),
+        sample_dir=args.sample_dir,
     )
 
     print(f"markers used: {result['num_markers']}")
