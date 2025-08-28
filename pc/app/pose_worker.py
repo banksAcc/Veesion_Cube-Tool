@@ -16,6 +16,8 @@ except Exception:
 log = get_logger("POSE")
 
 class PoseWorker:
+    """Asynchronous worker that estimates cube pose for capture sessions."""
+
     def __init__(self, cfg: dict, output_root: Path, ble_queue: asyncio.Queue[str]):
         self.cfg = cfg
         self.output_root = output_root
@@ -30,6 +32,7 @@ class PoseWorker:
             self.loop = asyncio.get_event_loop()
 
     async def start(self):
+        """Spawn worker tasks if pose estimation is enabled."""
         if not self.enabled:
             log.info("disabled")
             return
@@ -38,12 +41,14 @@ class PoseWorker:
             self.tasks.append(asyncio.create_task(self._worker()))
 
     async def stop(self):
+        """Signal workers to exit and wait for completion."""
         for _ in self.tasks:
             await self.queue.put(None)
         await asyncio.gather(*self.tasks, return_exceptions=True)
         self.tasks.clear()
 
     async def _worker(self):
+        """Consume jobs from the queue and process sessions in threads."""
         while True:
             job = await self.queue.get()
             if job is None:
@@ -54,10 +59,11 @@ class PoseWorker:
                 log.error(f"job error: {e}")
 
     def _process_session(self, job: dict):
+        """Process a completed capture session and write results to JSON."""
         session_dir = Path(job["session_dir"])
         start_iso = job["start"]
-        end_iso   = job["end"]
-        freq_ms   = int(job["freq_ms"])
+        end_iso = job["end"]
+        freq_ms = int(job["freq_ms"])
 
         method = self.cfg["pose"].get("method", "charuco").lower()
         out_json = self.output_root / f"{session_dir.name}_pose.json"
@@ -69,7 +75,7 @@ class PoseWorker:
         )
         try:
             frames = sorted(
-                [p for p in session_dir.glob("*") if p.suffix.lower() in (".jpg",".jpeg",".png",".tif",".tiff")]
+                [p for p in session_dir.glob("*") if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".tif", ".tiff")]
             )
             results = {
                 "session": session_dir.name,
@@ -84,9 +90,9 @@ class PoseWorker:
                 results["frames"] = self._pose_charuco(frames)
             elif method == "custom":
                 for p in frames:
-                    results["frames"].append({
-                        "file": p.name, "ok": False, "reason": "custom_not_implemented"
-                    })
+                    results["frames"].append(
+                        {"file": p.name, "ok": False, "reason": "custom_not_implemented"}
+                    )
             else:
                 reason = "missing_opencv_contrib_or_invalid_method"
                 for p in frames:
@@ -112,6 +118,7 @@ class PoseWorker:
             )
 
     def _pose_charuco(self, frames: list[Path]) -> list[dict]:
+        """Estimate pose using ArUco cube markers for each frame."""
         res = []
         pose_cfg = self.cfg["pose"]["cube"]
         dict_name = pose_cfg.get("dictionary", "4X4_50")

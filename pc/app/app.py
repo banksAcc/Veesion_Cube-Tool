@@ -1,3 +1,5 @@
+"""Application entry point tying together BLE, capture and pose estimation."""
+
 import asyncio
 import sys
 import yaml
@@ -9,14 +11,19 @@ from session_manager import SessionManager
 from logger import setup_logging, get_logger
 
 # Loop policy recommended for Windows
+
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+
 def load_config(path: Path) -> dict:
+    """Load a YAML configuration file and return it as a dictionary."""
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
+
 async def main():
+    """Set up components and run the BLE client loop."""
     cfg = load_config(Path("config.yaml"))
     setup_logging(cfg)
 
@@ -31,6 +38,7 @@ async def main():
     await pose_worker.start()
 
     # Session manager with reference to the worker
+
     session_mgr = SessionManager(cfg, output_root, pose_worker.queue)
 
     # Start BLE client (blocking until interrupted)
@@ -40,6 +48,7 @@ async def main():
         # Clean shutdown
         await session_mgr.shutdown()
         await pose_worker.stop()
+
 
 if __name__ == "__main__":
     main_log = get_logger("MAIN")

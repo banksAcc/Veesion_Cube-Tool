@@ -9,6 +9,7 @@ END_CMD = "END"  # user confirmed END
 log = get_logger("BLE")
 
 async def _discover_address(cfg: dict) -> str | None:
+    """Return address from config or discover a device matching the name prefix."""
     addr = cfg["ble"].get("addr")
     if addr:
         return addr
@@ -23,10 +24,13 @@ async def _discover_address(cfg: dict) -> str | None:
     log.warning("No device found.")
     return None
 
+
 async def run_ble_client(cfg: dict, session_mgr, out_queue: asyncio.Queue[str]):
+    """Connect to the ESP32 and bridge BLE messages to the session manager."""
     address = await _discover_address(cfg)
     if not address:
         log.error("No address: exiting.")
+
         return
 
     # UUID NUS TX (notifications from device to PC)
@@ -66,7 +70,7 @@ async def run_ble_client(cfg: dict, session_mgr, out_queue: asyncio.Queue[str]):
 
                 sender_task = asyncio.create_task(send_queued())
 
-                # Mantieni viva la connessione; se cade → stop capture se richiesto
+                # Keep the connection alive; stop capture if it drops
                 while client.is_connected:
                     await asyncio.sleep(0.5)
 
@@ -75,7 +79,6 @@ async def run_ble_client(cfg: dict, session_mgr, out_queue: asyncio.Queue[str]):
                     await sender_task
                 except asyncio.CancelledError:
                     pass
-
                 log.info("Disconnected.")
                 if cfg["capture"].get("stop_on_ble_disconnect", True):
                     await session_mgr.stop_session(reason="ble_disconnect")
