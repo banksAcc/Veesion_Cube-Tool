@@ -74,4 +74,3 @@ file can be enabled via `runtime.log_to_file`.
 ## License
 
 MIT License.
-

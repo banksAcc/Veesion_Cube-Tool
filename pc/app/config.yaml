@@ -5,10 +5,13 @@ ble:
 
 capture:
   frequency_ms: 200
-  output_root: "../captures"          # can live elsewhere (e.g. OneDrive) but local is faster
-  use_camera: false                 # false = test mode (reads images from a folder)
-  camera_id: 0                     # camera index; adjust for Basler or other SDKs
-  image_format: "tiff"             # "jpg" or "png" also supported
+  output_root: "../captures"          # può stare anche in OneDrive; io terrei locale per prestazioni
+  use_camera: false                 # false = modalità test, copia immagini da "test_source_dir"
+  camera_type: "opencv"            # "opencv" = cv2.VideoCapture, "pylon" = Basler via pypylon
+  camera_id: 0                     # id della webcam (solo per camera_type=opencv)
+  camera_serial: null              # seriale Basler (camera_type=pylon)
+  camera_ip: null                  # IP Basler (camera_type=pylon)
+  image_format: "tiff"             # "jpg" o "png"
   jpeg_quality: 90
   tiff_compression: "lzw"          # none | lzw | deflate | packbits
   test_source_dir: "../image_to_be_used"   # used when use_camera=false

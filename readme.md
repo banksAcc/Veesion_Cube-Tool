@@ -76,12 +76,12 @@ pip install cube-minimal
 ## Repository Structure
 
 ```
+
 aruco-pen-pose/
 ├─ esp32/                # ESP32 firmware
 ├─ pc/                   # PC application
 ├─ stl/                  # 3D printable parts
 └─ readme.md             # this file
-```
 
 ## Quick Start
 
