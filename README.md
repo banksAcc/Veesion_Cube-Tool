@@ -3,6 +3,12 @@
 A compact hardware and software stack for estimating the pose of a 3D‑printed pen tip.  
 An ESP32 inside the pen sends a BLE trigger; the PC listens for the event, grabs a frame from a camera and computes the pen pose from ArUco markers.
 
+![License](https://img.shields.io/badge/license-Proprietary-red)
+![Python](https://img.shields.io/badge/python-3.10+-blue)
+![C++](https://img.shields.io/badge/firmware-ESP32-green)
+![PlatformIO](https://img.shields.io/badge/build-PlatformIO-orange)
+![OpenCV](https://img.shields.io/badge/OpenCV-4.8+-brightgreen)
+
 ## Idea
 <div style="display: flex; gap: 20px;">
   <img src="esp32/img/example_nobg_2.png" alt="Device" width="400"/>
