@@ -11,7 +11,7 @@ output_root = Path(cfg["capture"]["output_root"])
 async def main():
     sm = SessionManager(cfg, output_root, asyncio.Queue())
     await sm.handle_start_command()  # avvia acquisizione
-    await asyncio.sleep(5)           # durata test (sec)
+    await asyncio.sleep(2)           # durata test (sec)
     await sm.handle_end_command()    # chiude sessione
     await sm.shutdown()
 
