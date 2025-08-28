@@ -61,6 +61,17 @@ Il sistema permette di:
   - Alla pressione → invia `START\n`, LED rosso tenue (se connesso), display `Invio…`.
   - Al rilascio → invia `END\n`, ritorno allo stato precedente.
 
+#### Rilevamento long press
+
+```
+tempo (ms): 0    50   550   800
+livello   : HIGH \____LOW____/ HIGH
+               fell longPress  rose
+```
+
+La durata della pressione è `t_rilascio - t_pulsazione`; se supera `longMs`
+si ottiene l'evento `longPress`. Maggiori dettagli in [`docs/buttons.md`](docs/buttons.md).
+
 ---
 
 ## Struttura software

@@ -1,3 +1,11 @@
+/**
+ * @file DisplayManager.cpp
+ * @brief Implementazione della gestione del display OLED SSD1306.
+ *
+ * Responsabilità: rende lo stato del sistema su schermo e gestisce animazioni.
+ * Dipendenze: Arduino core, Wire, Adafruit_SSD1306, Adafruit_GFX.
+ */
+
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>

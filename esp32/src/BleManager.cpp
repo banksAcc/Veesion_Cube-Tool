@@ -1,3 +1,11 @@
+/**
+ * @file BleManager.cpp
+ * @brief Implementazione del gestore BLE basato su NimBLE-Arduino.
+ *
+ * Responsabilità: inizializza e gestisce server, advertising, connessioni e scambio messaggi.
+ * Dipendenze: Arduino core, NimBLE-Arduino.
+ */
+
 #include <Arduino.h>
 #include "BleManager.h"
 
