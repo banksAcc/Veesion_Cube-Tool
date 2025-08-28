@@ -85,14 +85,17 @@ runtime:
   log_to_file: false
 ```
 
-### Esecuzione
-- Accendi l’ESP32 (parte già in **advertising**).
-- Avvia la app:
-  ```powershell
-  python app.py
-  ```
-- Premi **BTN16**: `START` all’**inizio** della pressione, `END` al **rilascio**.
-- Al **END** la sessione viene messa in coda per la **pose** (in parallelo puoi già iniziare un nuovo `START`).
+## Configuration (`app/config.yaml`)
+- `ble.name_prefix` or `ble.addr` – select the ESP32 device
+- `capture.frequency_ms` – interval between frames
+- `capture.use_camera` – true for real camera, false for test mode
+- `capture.camera_id` – OpenCV index or Basler serial
+- `capture.image_format` – `jpg`, `png`, `tiff`
+- `capture.tiff_compression` – `none`, `lzw`, `deflate`, `packbits`
+- `pose.enabled` – enable pose processing
+- `pose.cube` – dictionary, marker size, cube size, pairing strategy
+- `pose.camera_calibration_npz` – path to intrinsics and distortion data
+- `runtime.debug` / `runtime.log_to_file` – logging options
 
 ### Cattura: Camera reale vs Test mode
 Scegli la strategia di cattura tramite `capture.use_camera` nel `config.yaml`:
@@ -106,22 +109,15 @@ Scegli la strategia di cattura tramite `capture.use_camera` nel `config.yaml`:
   - `stop_on_test_exhausted: true` ⇒ **termina** la sessione.
   - `false` ⇒ **ricomincia** dall’inizio (ciclo).
 
-Supporto **TIFF** con compressione opzionale LZW/Deflate, e **16-bit** (convertiti a 8-bit per ArUco).
+## Capture modes
+- **Real camera:** `capture.use_camera: true`
+- **Test mode:** `capture.use_camera: false` – images are copied from `capture.test_source_dir`.
 
-### Stima di posa (ChArUco)
-- Richiede **OpenCV contrib**.
-- Parametri: `squares_x`, `squares_y` (numero di quadretti), `square_length_mm` (lato quadretto), `marker_length_mm` (lato marker ArUco).
-- Calibrazione **camera** via `.npz`:
-  - chiavi supportate: `camera_matrix`/`cameraMatrix`/`K`/`mtx` e `dist_coeffs`/`distCoeffs`/`D`/`dist` (configurabili con `calib_keys`).
-- Output per frame: `ok`, `rvec`, `tvec`, `num_charuco`, `reproj_err`.  
-  > `rvec`/`tvec` sono la posa **board→camera** (Rodrigues + traslazione, unità mm se la board è in mm).
+Basler cameras are supported via the [pypylon](https://github.com/basler/pypylon) backend; ensure the SDK is installed and supply the desired serial number as `capture.camera_id`.
 
-### Formato output & naming
-- Sessioni salvate in:  
-  `captures/session_YYYY-mm-dd_HH-MM-SS__YYYY-mm-dd_HH-MM-SS/`
-- Risultati posa:  
-  `captures/session_..._pose.json`
-- Se `delete_frames_after_processing=true` **e** `runtime.debug=false` ⇒ i frame della sessione vengono **rimossi** dopo il calcolo (lo JSON rimane).
+## Pose estimation
+The worker reads finished sessions and computes cube/pen poses using the calibration file.  
+Results are written next to the session folder in JSON format. See [`../cube_minimal/README.md`](../cube_minimal/README.md) for algorithm details.
 
 ### Logging & Debug
 - Each session writes a **`session.log`** in its own folder.
@@ -130,14 +126,5 @@ Supporto **TIFF** con compressione opzionale LZW/Deflate, e **16-bit** (converti
 - Enable `runtime.log_to_file: true` to also write a global log file (`app.log`).
 - Inconsistent state (START/START, END/END) is reported on console but does not stop the pipeline.
 
-### Troubleshooting
-- **BLE non si connette**: spegni/riaccendi Bluetooth di sistema; chiudi app concorrenti (es. nRF Connect). Su Windows, lo script imposta automaticamente la **WindowsSelectorEventLoopPolicy**.
-- **Non trova l’ESP**: usa `ble.addr` nel `config.yaml` (indirizzo stampato lato ESP su seriale) oppure aumenta `scan_timeout`.
-- **Camera**: prova `camera_id: 1/2`; verifica di non avere la webcam occupata da altre app.
-- **no_calibration**: controlla che il `.npz` contenga le chiavi giuste o usa `pose.calib_keys` per mappare i nomi (`cameraMatrix`, `distCoeffs`, ecc.).
-- **Prestazioni**: TIFF/16-bit e risoluzioni elevate rallentano la detection; valuta downscale o JPEG qualità alta.
-
----
-
-## Licenza
+## License
 MIT
