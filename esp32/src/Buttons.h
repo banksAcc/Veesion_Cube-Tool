@@ -1,6 +1,19 @@
 #pragma once
 #include <Arduino.h>
 
+/*
+ * Modello eventi pulsante
+ *
+ *  time (ms) : 0    50   550   800
+ *  livello   : HIGH \____LOW____/ HIGH
+ *                fell  longPress  rose
+ *
+ *  fell      -> transizione da rilasciato (HIGH) a premuto (LOW)
+ *  rose      -> transizione da premuto (LOW) a rilasciato (HIGH)
+ *  longPress -> il pulsante resta LOW per `longMs` millisecondi
+ *  isDown    -> stato corrente del pulsante (LOW quando premuto)
+ */
+
 struct Button {
   int pin;
   bool lastStable = true;  // pull-up -> HIGH = rilasciato
