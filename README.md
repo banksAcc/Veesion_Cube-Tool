@@ -15,16 +15,25 @@ An ESP32 inside the pen sends a BLE trigger; the PC listens for the event, grabs
   <img src="pc/captures/session_2025-08-28_13-39-13__2025-08-28_13-39-13/img_for_readme.png" alt="Cube After" width="400"/>
 </div>
 
-## Hardware
-- ESP32 with BLE and two push buttons
-- 3D‑printed pen body and cube with 3–4 ArUco markers
-- Basler industrial camera or any UVC webcam
-- ChArUco or chessboard target for camera calibration
+## Prerequisites
 
-## Software
-- **ESP32 firmware** – BLE trigger and UI (see [`esp32/README.md`](esp32/README.md))
-- **PC capture pipeline** – Python + OpenCV/Bleak with optional Basler support (see [`pc/README.md`](pc/README.md))
-- **`cube_minimal` library** – cube pose utilities (see [`cube_minimal/README.md`](cube_minimal/README.md))
+### Hardware
+- **ESP32 DevKit** (BLE + two buttons) to trigger the acquisition
+- **Physical assembly**: 3D-printed pen/cube with 3–4 ArUco markers attached
+- **Camera**: Basler camera with Pylon drivers installed or a compatible UVC webcam
+- **Calibration target**: ChArUco board or checkerboard pattern
+
+### Software
+- **Python ≥3.10** and `pip` to install dependencies
+- **ESP32 firmware toolchain**: Arduino IDE/CLI or PlatformIO (optional but recommended)
+- **Basler Pylon drivers** (optional) for industrial camera integration
+- Python libraries from [`pc/app/requirements.txt`](pc/app/requirements.txt)
+
+## Repository structure
+- [`esp32/`](esp32/) – BLE firmware for the pen, detailed in [`esp32/README.md`](esp32/README.md)
+- [`pc/`](pc/) – PC-side application for capture and pose estimation, see [`pc/README.md`](pc/README.md)
+- [`cube_minimal/`](cube_minimal/) – pose estimation library with dataset and tests
+- [`cube_minimal/data/sample_dataset/`](cube_minimal/data/sample_dataset/) – sample images referenced in [Quick start](#quick-start)
 
 ## Workflow
 1. Press a button on the pen. The ESP32 publishes a BLE notification.
@@ -33,28 +42,79 @@ An ESP32 inside the pen sends a BLE trigger; the PC listens for the event, grabs
 4. A fixed transform gives the pen‑tip pose, which can be logged or streamed.
 
 ## Quick start
-### PC setup
+
+### Set up the PC environment
 ```bash
 cd pc
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -r app/requirements.txt
 ```
-Edit [`pc/app/config.yaml`](pc/app/config.yaml) to choose the camera (`camera_id` or Basler serial), output folder and pose options.
-
-### Calibration
-Use the scripts in [`pc/calib/`](pc/calib/) with a printed ChArUco or chessboard target to produce `calib_data.npz` for the camera intrinsics.
-
-### Capture & pose
-```bash
-python app.py --ble-name ARU-PEN --camera 0 --dict DICT_4X4_50 --marker-size-mm 20.0
+```powershell
+cd pc
+py -m venv .venv
+. .\.venv\Scripts\Activate.ps1
+pip install -r app\requirements.txt
 ```
-Captured frames appear under `pc/captures/` and are processed by the pose worker.
+> Tip: keep the virtual environment active for the next steps (`pytest`, CLI, PC application).
+
+### Build & flash the ESP32 firmware
+Follow the [Getting Started](esp32/README.md#getting-started) section of the firmware:
+
+1. Install the **NimBLE-Arduino**, **Adafruit SSD1306**, and **Adafruit GFX** libraries via the Arduino Library Manager.
+2. Wire the components as described in [`esp32/README.md`](esp32/README.md#connections).
+3. Build and upload the project by selecting the **ESP32 Dev Module** board (Arduino IDE/CLI) or set up an equivalent PlatformIO project.
+
+### Calibration and sample dataset
+- Use the scripts in [`pc/calib/`](pc/calib/) to produce `calib_data.npz` (camera intrinsics) from a ChArUco/checkerboard target.
+- For quick trials, point `capture.test_source_dir` to [`cube_minimal/data/sample_dataset/`](cube_minimal/data/sample_dataset/), which contains the sample images described in its [README](cube_minimal/data/README.md).
+
+### Run the pipeline quickly
+```bash
+cd pc/app
+python app.py
+```
+Configure [`config.yaml`](pc/app/config.yaml) before launching the application: set `ble.name_prefix` or `ble.addr`, choose the camera (`camera_type`, `camera_id`/`camera_serial`), and provide the calibration path (`pose.camera_calibration_npz`).
+
+#### Simulated mode
+For tests without physical hardware, set in `config.yaml`:
+
+```yaml
+capture:
+  simulate_camera: true
+  test_source_dir: "../cube_minimal/data/sample_dataset"
+```
+This mode replays sessions by reading the sample images through the same processing pipeline.
+
+## Rapid validation
+- **Python tests** (`cube_minimal`):
+  ```bash
+  cd pc
+  source .venv/bin/activate        # Linux/macOS
+  # PowerShell: . .\.venv\Scripts\Activate.ps1
+  pytest ../cube_minimal/tests
+  ```
+- **Single-image estimation CLI**:
+  ```bash
+  python -m cube_minimal.cli.estimate_one \
+      --image cube_minimal/data/sample_dataset/example_1.png \
+      --camera cube_minimal/config/calib_data.npz \
+      --aruco_dict 4X4_50 \
+      --marker_size 0.055 \
+      --cube_size 0.060 \
+      --out overlay.png
+  ```
+- **Simulated PC session**: enable `capture.simulate_camera: true` as above and launch the application from `pc/app/`:
+  ```bash
+  python app.py
+  ```
 
 ## Further reading
-- [`pc/README.md`](pc/README.md) – detailed PC configuration, Basler parameters and pose pipeline
-- [`esp32/README.md`](esp32/README.md) – hardware, LED and button logic
-- [`cube_minimal/README.md`](cube_minimal/README.md) – cube pose estimation module
+- [Prerequisites](#prerequisites) and [Repository structure](#repository-structure) for a quick overview
+- [`pc/README.md`](pc/README.md) – deep dive into the PC pipeline configuration and Basler parameters
+- [`esp32/README.md`](esp32/README.md) – hardware details, LEDs, and buttons
+- [`cube_minimal/README.md`](cube_minimal/README.md) – pose estimation API and CLI
+- [`cube_minimal/data/README.md`](cube_minimal/data/README.md) – structure of the sample dataset
 
 ## License
 All rights reserved.

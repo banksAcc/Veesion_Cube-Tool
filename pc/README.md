@@ -1,130 +1,96 @@
-# ESP32 BLE Trigger → PC Capture & Pose Pipeline
+﻿# ESP32 BLE Trigger -> PC Capture & Pose Pipeline
 
-This directory hosts the Python application that receives BLE triggers from an
-ESP32 device and captures images for later pose estimation.
+## Overview
+This directory hosts the Python application that listens for BLE triggers from an ESP32 device, captures images, and performs optional cube pose estimation.
 
 ## Features
+- Start or stop capture sessions from a physical ESP32 button.
+- Store frames in timestamped session folders for later inspection.
+- Asynchronously estimate cube pose with OpenCV-based workers.
+- Support webcams or industrial cameras such as Basler via `pypylon`.
 
-- Start/stop image capture sessions from a physical button on the ESP32.
-- Save frames into timestamped sessions on disk.
-- Asynchronously estimate the pose of a cube with ArUco markers using OpenCV.
-- Works with webcams or industrial cameras such as Basler.
+## Prerequisites
+- Python 3.10 or newer available on the system `PATH`.
+- `pip` for installing Python dependencies.
+- Optional Basler Pylon drivers and the `pypylon` package when using Basler cameras.
+- BLE tooling (BlueZ on Linux, native stack on Windows/macOS) to pair the ESP32.
 
 ## Project Structure
-
 ```
 app/
-├─ app.py               # entry point
-├─ ble_client.py        # BLE connection and message handling
-├─ session_manager.py   # session lifecycle management
-├─ capture.py           # camera acquisition or test image copy
-├─ pose_worker.py       # asynchronous pose computation
-├─ config.yaml          # configuration file
-└─ requirements.txt
+  app.py               # application entry point
+  ble_client.py        # BLE connection and message handling
+  capture.py           # camera acquisition or simulated frame sourcing
+  click_test.py        # quick script to validate BLE button callbacks
+  config.yaml          # runtime configuration
+  pose_worker.py       # asynchronous pose computation
+  requirements.txt
+  session_manager.py   # session lifecycle management
 
 calib/                  # sample calibration data
-captures/               # session output
+captures/               # capture sessions written here
+image_to_be_used/       # sample dataset for simulated mode
 ```
 
-### Installazione
-Consigliato **virtual env**:
+## Installation
+Run the commands from the `pc/` directory.
+
+### Linux/macOS (bash/zsh)
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r app/requirements.txt
+```
+
+### Windows (PowerShell)
 ```powershell
-# Windows PowerShell nella cartella pc_app/
-py -m venv .venv
-. .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
-> Requisiti principali: `bleak`, `PyYAML`, `opencv-contrib-python`, `numpy`.
-
-### Configurazione (`config.yaml`)
-Esempio:
-```yaml
-ble:
-  name_prefix: "ESP32-RGB-BLE"
-  addr: null
-  scan_timeout: 8.0
-
-capture:
-  frequency_ms: 200
-  output_root: "captures"
-  simulate_camera: false       # true = test mode (uses images from a folder)
-  camera_type: "webcam"       # "webcam", "ip", etc.
-  camera_id: 0
-  camera_serial: null
-  camera_ip: null
-  image_format: "jpg"        # supported: jpg/png/tif/tiff
-  jpeg_quality: 90
-  tiff_compression: "lzw"    # optional
-  test_source_dir: "test_images"
-  stop_on_test_exhausted: false
-  shuffle_test_images: false   # optional: randomize order
-  stop_on_ble_disconnect: true
-  keep_session_frames_on_error: true
-
-pose:
-  enabled: true
-  method: "charuco"          # oppure "custom" (stub)
-  max_parallel_jobs: 3
-  delete_frames_after_processing: true
-  results_format: "json"
-  charuco:
-    dictionary: "DICT_4X4_50"
-    squares_x: 5
-    squares_y: 7
-    square_length_mm: 30.0
-    marker_length_mm: 22.0
-  camera_calibration_npz: "calibration.npz"
-  # opzionale: se il .npz usa chiavi diverse
-  calib_keys:
-    K: "cameraMatrix"
-    D: "distCoeffs"
-
-runtime:
-  debug: true
-  log_level: INFO      # DEBUG, INFO, WARNING, ERROR
-  log_to_file: false
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r app\requirements.txt
 ```
 
-## Configuration (`app/config.yaml`)
-- `ble.name_prefix` or `ble.addr` – select the ESP32 device
-- `capture.frequency_ms` – interval between frames
-- `capture.use_camera` – true for real camera, false for test mode
-- `capture.camera_id` – OpenCV index or Basler serial
-- `capture.image_format` – `jpg`, `png`, `tiff`
-- `capture.tiff_compression` – `none`, `lzw`, `deflate`, `packbits`
-- `pose.enabled` – enable pose processing
-- `pose.cube` – dictionary, marker size, cube size, pairing strategy
-- `pose.camera_calibration_npz` – path to intrinsics and distortion data
-- `runtime.debug` / `runtime.log_to_file` – logging options
+Deactivate the virtual environment with `deactivate` when you are done.
 
-### Cattura: Camera reale vs Test mode
-Scegli la strategia di cattura tramite `capture.use_camera` nel `config.yaml`:
+## Quick Configuration
+1. Copy `app/config.example.yaml` to `app/config.yaml` if the example file is available. Otherwise duplicate the existing `config.yaml` before editing.
+2. For simulated runs, set `capture.simulate_camera: true` and point `capture.test_source_dir` to `../image_to_be_used` or another folder with sample frames.
+3. For real hardware, set `capture.simulate_camera: false`, choose `capture.camera_type` (`webcam`, `ip`, `basler`, etc.), and configure `capture.camera_id`, `capture.camera_serial`, or `capture.camera_ip` as required.
+4. Confirm `pose.camera_calibration_npz` points to a valid calibration file inside `calib/`.
+5. Adjust logging preferences with `runtime.log_level` and `runtime.log_to_file` if you need more diagnostics.
 
-- **Camera reale** (`true`): usa `cv2.VideoCapture(camera_id)` oppure, quando
-  disponibile, l'integrazione Basler `pypylon` per camere industriali.
-  Consigliato quando vuoi testare l'intera pipeline con hardware reale.
-- **Test mode** (`false`): copia immagini da `test_source_dir` con cadenza
-  `frequency_ms`. Ideale per debug, sviluppo offline o integrazione continua.
-  Se le immagini finiscono:
-  - `stop_on_test_exhausted: true` ⇒ **termina** la sessione.
-  - `false` ⇒ **ricomincia** dall’inizio (ciclo).
+## Execution
+- Simulated mode (no camera): ensure `capture.simulate_camera: true`, then run
+  ```bash
+  python app/app.py
+  ```
+- Real camera mode: set `capture.simulate_camera: false`, install any manufacturer drivers (for Basler, install Pylon and `pip install pypylon`), then execute
+  ```bash
+  python app/app.py
+  ```
+- Quick BLE test: validate button presses and logging without the full pipeline using
+  ```bash
+  python app/click_test.py
+  ```
 
-## Capture modes
-- **Real camera:** `capture.use_camera: true`
-- **Test mode:** `capture.use_camera: false` – images are copied from `capture.test_source_dir`.
+## Test and Debug
+- Each capture session writes a `session.log` file inside the session folder under `captures/`.
+- Global logging can be enabled with `runtime.log_to_file: true`, producing `app.log` in the project root.
+- Raise verbosity by setting `runtime.log_level` to `DEBUG`, then restart the application to reload the configuration.
+- BLE connection states, capture errors, and pose worker issues are all reported in the logs for post-mortem analysis.
 
-Basler cameras are supported via the [pypylon](https://github.com/basler/pypylon) backend; ensure the SDK is installed and supply the desired serial number as `capture.camera_id`.
+## Key Parameters
+| Parameter | Section | Purpose | Example |
+| --- | --- | --- | --- |
+| `capture.frequency_ms` | `capture` | Interval between frame acquisitions in milliseconds. | `200` |
+| `capture.simulate_camera` | `capture` | Toggle between simulated datasets and live cameras. | `true` |
+| `capture.test_source_dir` | `capture` | Directory for sample frames when simulating. | `../image_to_be_used` |
+| `capture.stop_on_test_exhausted` | `capture` | Decide whether to stop or loop when sample images end. | `false` |
+| `pose.method` | `pose` | Select the pose solver (`cube`, `custom`). | `cube` |
+| `pose.max_parallel_jobs` | `pose` | Limit concurrent pose computations. | `3` |
+| `runtime.log_level` | `runtime` | Set logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`). | `INFO` |
+| `runtime.log_to_file` | `runtime` | Enable writing aggregated logs to `app.log`. | `false` |
 
-## Pose estimation
-The worker reads finished sessions and computes cube/pen poses using the calibration file.  
-Results are written next to the session folder in JSON format. See [`../cube_minimal/README.md`](../cube_minimal/README.md) for algorithm details.
-
-### Logging & Debug
-- Each session writes a **`session.log`** in its own folder.
-- Log messages are prefixed by component (e.g., `[BLE]`, `[CAPTURE]`) and respect the verbosity from `runtime.log_level`.
-- Available levels: `DEBUG`, `INFO`, `WARNING`, `ERROR`. Adjust `runtime.log_level` in `config.yaml` and restart the app to change verbosity.
-- Enable `runtime.log_to_file: true` to also write a global log file (`app.log`).
-- Inconsistent state (START/START, END/END) is reported on console but does not stop the pipeline.
+Pose results are saved alongside session folders. Refer to `../cube_minimal/README.md` for details on interpreting the cube pose output and validating calibration.
 
 ## License
 All rights reserved.
