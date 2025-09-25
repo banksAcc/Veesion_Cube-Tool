@@ -2,7 +2,7 @@
 
 This module exposes :class:`SessionManager`, which reacts to BLE commands and
 starts or stops capture sessions. Each :class:`Session` chooses a concrete
-capture backend according to ``cfg['capture']['use_camera']``:
+capture backend according to ``cfg['capture']['simulate_camera']``:
 
 * ``True`` -> :class:`OpenCvCapture` reads frames from a physical camera (webcam
   or Basler via ``pypylon`` when integrated).
