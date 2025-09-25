@@ -39,7 +39,6 @@ class SessionJob:
     end_iso: Optional[str] = None
     finished: threading.Event = field(default_factory=threading.Event)
     task: Optional[asyncio.Task] = None
-    overlay_window: Optional[str] = None
 
 
 class PoseWorker:
@@ -62,8 +61,8 @@ class PoseWorker:
         self.method = cfg["pose"].get("method", "cube").lower()
         self.delete_frames = bool(cfg["pose"].get("delete_frames_after_processing", True))
         self.debug = bool(cfg["runtime"].get("debug", True))
-        self.show_overlay = bool(cfg["pose"].get("show_overlay_window", False)) and HAS_CV
-        self.overlay_title = cfg["pose"].get("overlay_window_name", "Pose Overlay")
+        self.keep_frames = (not self.delete_frames) or self.debug
+        self.file_settle = max(0.0, float(cfg["pose"].get("stream_file_settle_ms", 120)) / 1000.0)
         self.idle_checks = int(cfg["pose"].get("stream_idle_checks", 3))
         self.poll_floor = float(cfg["pose"].get("stream_poll_interval_ms", 100)) / 1000.0
         self.pose_cfg = cfg["pose"].get("cube", {})
@@ -169,14 +168,27 @@ class PoseWorker:
                 new_frames = [p for p in frames if p.name not in job.processed]
                 if new_frames:
                     idle_rounds = 0
-                    for frame_path in new_frames:
-                        frame_result, overlay = self._process_frame(frame_path)
-                        job.results["frames"].append(frame_result)
-                        job.processed.add(frame_path.name)
-                        if overlay is not None:
-                            self._render_overlay(job, overlay)
                 else:
                     idle_rounds += 1
+
+                for frame_path in new_frames:
+                    try:
+                        mtime = frame_path.stat().st_mtime
+                    except FileNotFoundError:
+                        continue
+
+                    if time.time() - mtime < self.file_settle:
+                        continue
+
+                    frame_result, overlay = self._process_frame(frame_path)
+                    job.results["frames"].append(frame_result)
+                    job.processed.add(frame_path.name)
+
+                    if overlay is not None and self.keep_frames and HAS_CV:
+                        try:
+                            cv2.imwrite(str(frame_path), overlay)
+                        except Exception as exc:
+                            log.warning(f"overlay write failed: {exc}")
 
                 if job.finished.is_set() and idle_rounds >= self.idle_checks:
                     break
@@ -192,7 +204,6 @@ class PoseWorker:
                 job.results["end"] = job.results.get("end") or job.start_iso
             self._write_results(job, final_dir)
             self._cleanup_frames(final_dir)
-            self._close_overlay(job)
             self._notify_ble("COMPUTATION END")
 
     def _process_frame(self, frame_path: Path) -> Tuple[dict, Optional["np.ndarray"]]:
@@ -273,11 +284,6 @@ class PoseWorker:
             )
 
         overlay = result.get("overlay")
-        if overlay is not None:
-            try:
-                cv2.imwrite(str(frame_path), overlay)
-            except Exception:
-                overlay = None
 
         frame_entry = {
             "file": frame_path.name,
@@ -288,30 +294,6 @@ class PoseWorker:
             "num_markers": int(result.get("num_markers", 0)),
         }
         return frame_entry, overlay
-
-    def _render_overlay(self, job: SessionJob, overlay) -> None:
-        if not self.show_overlay or overlay is None:
-            return
-        window = job.overlay_window
-        if window is None:
-            window = f"{self.overlay_title} - {job.key}"
-            job.overlay_window = window
-        try:
-            cv2.imshow(window, overlay)
-            cv2.waitKey(1)
-        except Exception as exc:
-            log.warning(f"Overlay display failed: {exc}")
-            job.overlay_window = None
-
-    def _close_overlay(self, job: SessionJob) -> None:
-        if not self.show_overlay:
-            return
-        if job.overlay_window and HAS_CV:
-            try:
-                cv2.destroyWindow(job.overlay_window)
-            except Exception:
-                pass
-            job.overlay_window = None
 
     def _write_results(self, job: SessionJob, final_dir: Path) -> None:
         out_json = self.output_root / f"{final_dir.name}_pose.json"
