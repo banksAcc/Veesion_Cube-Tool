@@ -16,7 +16,6 @@ An ESP32 inside the pen sends a BLE trigger; the PC listens for the event, grabs
 </div>
 <div>
   <img src="stl/image/pen and marker 2.png" alt="3D pen" width="400"/>
-  <img src="stl/image/pen and marker.png" alt="3D pen" width="400"/>
 </div>
 ## Prerequisites
 
