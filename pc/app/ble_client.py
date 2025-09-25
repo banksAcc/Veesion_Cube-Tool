@@ -1,3 +1,4 @@
+
 """BLE communication utilities for the capture application.
 
 This module discovers and connects to a BLE device, relaying start and stop
@@ -17,17 +18,8 @@ log = get_logger("BLE")
 
 
 async def _discover_address(cfg: dict) -> str | None:
-    """Find the BLE device address from the configuration or by scanning.
+    """Find the BLE device address from the configuration or by scanning."""
 
-    Args:
-        cfg (dict): Application configuration containing BLE options.
-
-    Returns:
-        str | None: Discovered device address or ``None`` if not found.
-
-    Side Effects:
-        Logs scan progress.
-    """
     addr = cfg["ble"].get("addr")
     if addr:
         return addr
@@ -44,14 +36,8 @@ async def _discover_address(cfg: dict) -> str | None:
 
 
 async def run_ble_client(cfg: dict, session_mgr, out_queue: asyncio.Queue[str]):
-    """Connect to the ESP32 and bridge BLE messages to the session manager.
+    """Connect to the ESP32 and bridge BLE messages to the session manager."""
 
-    Args:
-        cfg (dict): Application configuration.
-        session_mgr: Session manager handling start/end commands.
-        out_queue (asyncio.Queue[str]): Queue with outgoing messages for the
-            BLE device.
-    """
     address = await _discover_address(cfg)
     if not address:
         log.error("No address: exiting.")
@@ -81,41 +67,45 @@ async def run_ble_client(cfg: dict, session_mgr, out_queue: asyncio.Queue[str]):
                 if not client.is_connected:
                     raise RuntimeError("Connection failed")
 
-                await client.start_notify(NUS_TX_UUID, on_notify)
-                log.info("Subscribed to notifications. (CTRL+C to exit)")
-
-                async def send_queued():
-                    """Send messages from the queue to the BLE device."""
-
-                    while True:
-                        msg = await out_queue.get()
-                        if msg is None:
-                            break
-                        try:
-                            await client.write_gatt_char(NUS_RX_UUID, msg.encode())
-                        except Exception as e:
-                            log.error(f"send error: {e}")
-
-                sender_task = asyncio.create_task(send_queued())
-
-                # Keep the connection alive; stop capture if it drops
-                while client.is_connected:
-                    await asyncio.sleep(0.5)
-
-                sender_task.cancel()
+                sender_task = None
                 try:
-                    await sender_task
-                except asyncio.CancelledError:
-                    pass
-                log.info("Disconnected.")
-                if cfg["capture"].get("stop_on_ble_disconnect", True):
-                    await session_mgr.stop_session(reason="ble_disconnect")
+                    await session_mgr.on_ble_connected()
+                    await client.start_notify(NUS_TX_UUID, on_notify)
+                    log.info("Subscribed to notifications. (CTRL+C to exit)")
 
+                    async def send_queued():
+                        """Send messages from the queue to the BLE device."""
+
+                        while True:
+                            msg = await out_queue.get()
+                            if msg is None:
+                                break
+                            try:
+                                await client.write_gatt_char(NUS_RX_UUID, msg.encode())
+                            except Exception as e:
+                                log.error(f"send error: {e}")
+
+                    sender_task = asyncio.create_task(send_queued())
+
+                    # Keep the connection alive; session manager reacts if it drops
+                    while client.is_connected:
+                        await asyncio.sleep(0.5)
+                finally:
+                    if sender_task is not None:
+                        sender_task.cancel()
+                        try:
+                            await sender_task
+                        except asyncio.CancelledError:
+                            pass
+                    log.info("Disconnected.")
+                    await session_mgr.on_ble_disconnected()
         except KeyboardInterrupt:
             log.info("Interrupted by user.")
+            await session_mgr.on_ble_disconnected()
             return
         except Exception as e:
             log.error(f"Error: {e}")
+            await session_mgr.on_ble_disconnected()
 
         log.info("Retrying in 2s ...")
         await asyncio.sleep(2.0)
