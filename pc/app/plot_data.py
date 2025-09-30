@@ -6,6 +6,9 @@ import json
 from pathlib import Path
 from typing import Any, Iterable, List, Sequence
 
+
+import matplotlib
+matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
@@ -83,8 +86,9 @@ def plot_trajectory(tvecs: np.ndarray, title: str) -> None:
 
     x_min, x_max = xs.min(), xs.max()
     y_min, y_max = ys.min(), ys.max()
-    z_min = min(zs.min(), 0.0)
-    z_max = max(zs.max(), 0.0)
+    palne_z = 0.85
+    z_min = min(zs.min(), palne_z)
+    z_max = max(zs.max(), palne_z)
 
     x_span = x_max - x_min
     y_span = y_max - y_min
@@ -94,7 +98,9 @@ def plot_trajectory(tvecs: np.ndarray, title: str) -> None:
     x_span_vals = np.linspace(x_min - pad, x_max + pad, 10)
     y_span_vals = np.linspace(y_min - pad, y_max + pad, 10)
     X, Y = np.meshgrid(x_span_vals, y_span_vals)
-    Z = np.zeros_like(X)
+    #Z = np.zeros_like(X)
+    Z = np.full_like(X, 0.85)
+
     ax.plot_surface(X, Y, Z, alpha=0.18, color="gray", edgecolor="none")
 
     ax.set_xlim(x_min - pad, x_max + pad)
