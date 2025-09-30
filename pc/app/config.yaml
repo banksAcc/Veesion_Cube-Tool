@@ -39,4 +39,4 @@ runtime:
   log_to_file: false               # write global app.log in addition to console
 
 plot:
-  default_pose_json: "../captures/session_2025-09-30_13-02-48__2025-09-30_13-02-59_pose.json"
+  default_pose_json: "../captures/session_2025-09-30_15-42-09__2025-09-30_15-42-20_pose.json"

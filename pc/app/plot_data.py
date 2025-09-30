@@ -62,7 +62,7 @@ def load_tvecs(session_path: Path) -> np.ndarray:
     for frame in frames:
         if not frame.get("ok"):
             continue
-        tvec = frame.get("tvec")
+        tvec = frame.get("tvec_tip")
         if not tvec or len(tvec) != 3:
             continue
         tvecs.append(tvec)
