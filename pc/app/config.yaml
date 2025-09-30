@@ -30,3 +30,6 @@ runtime:
   debug: false                      # extra debug behavior
   log_level: INFO                 # DEBUG, INFO, WARNING, ERROR
   log_to_file: false               # write global app.log in addition to console
+
+plot:
+  default_pose_json: "../captures/session_2025-09-25_17-20-19__2025-09-25_17-20-41_pose.json"
