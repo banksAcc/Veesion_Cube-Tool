@@ -66,6 +66,10 @@ class PoseWorker:
         self.idle_checks = int(cfg["pose"].get("stream_idle_checks", 3))
         self.poll_floor = float(cfg["pose"].get("stream_poll_interval_ms", 100)) / 1000.0
         self.pose_cfg = cfg["pose"].get("cube", {})
+        self.wand_offset = float(self.pose_cfg.get("wand_offset_m", 0.0))
+        self.wand_directions = self._build_wand_direction_map(
+            self.pose_cfg.get("wand_directions", {})
+        )
 
     async def start(self):
         """Spawn worker tasks if pose estimation is enabled."""
@@ -293,7 +297,92 @@ class PoseWorker:
             "reproj_err": None,
             "num_markers": int(result.get("num_markers", 0)),
         }
+
+        wand_tip = self._compute_wand_tip(result)
+        if wand_tip is not None:
+            tip_pos, wand_dir = wand_tip
+            frame_entry["tvec_tip"] = [float(x) for x in tip_pos]
+            frame_entry["wand_direction"] = [float(x) for x in wand_dir]
+
         return frame_entry, overlay
+
+
+    def _build_wand_direction_map(self, raw_cfg):
+        mapping = {}
+        if not isinstance(raw_cfg, dict):
+            return mapping
+        for key, spec in raw_cfg.items():
+            try:
+                marker_id = int(key)
+            except (TypeError, ValueError):
+                log.warning(f"Invalid marker id in wand_directions: {key!r}")
+                continue
+            mapping[marker_id] = spec
+        return mapping
+
+    def _direction_from_spec(self, spec):
+        if np is None:
+            return None
+        if isinstance(spec, (list, tuple)):
+            vec = np.asarray(spec, dtype=float)
+            if vec.shape != (3,):
+                log.warning(f"Invalid wand direction vector length: {spec!r}")
+                return None
+            norm = float(np.linalg.norm(vec))
+            if norm < 1e-9:
+                return None
+            return vec / norm
+        if isinstance(spec, str):
+            token = spec.strip().upper()
+            if not token:
+                return None
+            sign = 1.0
+            if token[0] in {"+", "-"}:
+                sign = -1.0 if token[0] == "-" else 1.0
+                token = token[1:]
+            axis_map = {
+                "X": np.array([1.0, 0.0, 0.0], dtype=float),
+                "Y": np.array([0.0, 1.0, 0.0], dtype=float),
+                "Z": np.array([0.0, 0.0, 1.0], dtype=float),
+            }
+            base = axis_map.get(token)
+            if base is None:
+                log.warning(f"Unknown wand axis token: {spec!r}")
+                return None
+            return base * sign
+        log.warning(f"Unsupported wand direction spec: {spec!r}")
+        return None
+
+    def _compute_wand_tip(self, result: dict):
+        if np is None or self.wand_offset == 0:
+            return None
+        markers = result.get("markers") or []
+        direction_vectors = []
+        for marker in markers:
+            marker_id = marker.get("id")
+            if marker_id not in self.wand_directions:
+                continue
+            local = self._direction_from_spec(self.wand_directions[marker_id])
+            if local is None:
+                continue
+            R_marker = np.asarray(marker.get("R"), dtype=float)
+            if R_marker.shape != (3, 3):
+                continue
+            direction_cam = R_marker @ local
+            norm = float(np.linalg.norm(direction_cam))
+            if norm < 1e-9:
+                continue
+            direction_vectors.append(direction_cam / norm)
+        if not direction_vectors:
+            return None
+        wand_dir = np.mean(direction_vectors, axis=0)
+        norm = float(np.linalg.norm(wand_dir))
+        if norm < 1e-9:
+            return None
+        wand_dir /= norm
+        tvec = np.asarray(result.get("tvec"), dtype=float).reshape(3,)
+        tip = tvec + wand_dir * float(self.wand_offset)
+        return tip, wand_dir
 
     def _write_results(self, job: SessionJob, final_dir: Path) -> None:
         out_json = self.output_root / f"{final_dir.name}_pose.json"

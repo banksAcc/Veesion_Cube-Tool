@@ -23,6 +23,13 @@ pose:
     marker_size_mm: 54.0      # marker side (only black portion)
     cube_size_mm: 60.0        # cube side
     pair_strategy: "max_angle"    # first or max_angle
+    wand_offset_m: 0.17
+    wand_directions:
+      "0": "+X"
+      "1": "+X"
+      "2": "-X"
+      "3": "+X"
+      "4": "-Z"
   camera_calibration_npz: "../calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
   stream_file_settle_ms: 120  # time before start process image saved on disk
 

@@ -1,4 +1,4 @@
-"""High level API to estimate the pose of a cube from a single image."""
+﻿"""High level API to estimate the pose of a cube from a single image."""
 
 from typing import Dict, Any, Union
 import numpy as np
@@ -8,6 +8,7 @@ from .camera_io import load_camera
 from .aruco_detect import detect_markers
 from .marker_pose import estimate_marker_poses
 from .cube_pose import estimate_cube_pose
+
 
 def estimate_cube_from_image(
     image_or_path: Union[str, np.ndarray],
@@ -51,6 +52,7 @@ def estimate_cube_from_image(
         - ``"R"``: ``(3,3)`` rotation matrix of the cube
         - ``"quat"``: ``(4,)`` quaternion ``(w, x, y, z)``
         - ``"num_markers"``: number of markers used
+        - ``"markers"``: list of marker poses used (id, rvec, tvec, R)
         - ``"overlay"``: optional BGR image if ``return_overlay`` is ``True``
 
     Raises
@@ -99,18 +101,39 @@ def estimate_cube_from_image(
     # Cube pose
     cube = estimate_cube_pose(poses, cube_size, pair_strategy=pair_strategy)
 
+    marker_dicts: list[dict[str, Any]] = []
+    for mp in poses:
+        marker_dicts.append(
+            {
+                "id": int(mp.id),
+                "rvec": mp.rvec.reshape(3).tolist(),
+                "tvec": mp.tvec.reshape(3).tolist(),
+                "R": mp.R.tolist(),
+            }
+        )
+
     # Optional overlay
     overlay = None
     if return_overlay:
         from .viz import draw_marker_outline, draw_small_axes, draw_wirecube, project_points_camframe
+
         overlay = img.copy()
         # axes + outline for each marker
         for det, mp in zip(detections, poses):
-            draw_marker_outline(overlay, det.corners, (0,255,255), 2)
+            draw_marker_outline(overlay, det.corners, (0, 255, 255), 2)
             cv2_len = max(marker_size * 0.5, cube_size * 0.3)  # rough scale
             draw_small_axes(overlay, K, dist, mp.rvec, mp.tvec, cv2_len)
         # cube wireframe
-        draw_wirecube(overlay, K, dist, cube.rvec, cube.t, cube_size, color=(0,255,0), thickness=2)
+        draw_wirecube(
+            overlay,
+            K,
+            dist,
+            cube.rvec,
+            cube.t,
+            cube_size,
+            color=(0, 255, 0),
+            thickness=2,
+        )
 
     return {
         "tvec": cube.t,
@@ -118,5 +141,6 @@ def estimate_cube_from_image(
         "R": cube.R,
         "quat": cube.quat,
         "num_markers": len(poses),
+        "markers": marker_dicts,
         "overlay": overlay,
     }
