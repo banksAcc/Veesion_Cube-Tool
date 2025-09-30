@@ -4,10 +4,10 @@ This module exposes :class:`SessionManager`, which reacts to BLE commands and
 starts or stops capture sessions. Each :class:`Session` chooses a concrete
 capture backend according to ``cfg['capture']['simulate_camera']``:
 
-* ``True`` -> :class:`OpenCvCapture` reads frames from a physical camera (webcam
-  or Basler via ``pypylon`` when integrated).
-* ``False`` -> :class:`TestCapture` replays static images from
+* ``True`` -> :class:`TestCapture` replays static images from
   ``test_source_dir`` for deterministic runs.
+* ``False`` -> :class:`OpenCvCapture` reads frames from a physical camera
+  or Basler via ``pypylon`` when integrated.
 
 The flag is typically set in ``pc/app/config.yaml`` and allows developers to
 switch between real hardware and test data without code changes.
@@ -37,7 +37,6 @@ class Session:
         root: Path,
         freq_ms: int,
         use_camera: bool,
-        cfg: dict,
         capturer: BaseCapture,
         auto_close: bool,
     ):
@@ -47,7 +46,6 @@ class Session:
             root (Path): Root directory where sessions are stored.
             freq_ms (int): Capture frequency in milliseconds.
             use_camera (bool): Whether to capture from a camera or test images.
-            cfg (dict): Application configuration.
             capturer (BaseCapture): Backend instance that performs acquisition.
             auto_close (bool): Whether the backend should auto-close at loop end.
         """
@@ -58,7 +56,6 @@ class Session:
         self.root = root
         self.freq_ms = int(freq_ms)
         self.use_camera = use_camera
-        self.cfg = cfg
         self.capturer = capturer
         self.auto_close = bool(auto_close)
 
@@ -127,13 +124,7 @@ class SessionManager:
     """Manage capture sessions and queue them for pose estimation."""
 
     def __init__(self, cfg: dict, output_root: Path, pose_queue: asyncio.Queue):
-        """Initialize the manager with configuration and queues.
-
-        Args:
-            cfg (dict): Application configuration.
-            output_root (Path): Directory where session data are stored.
-            pose_queue (asyncio.Queue): Queue for enqueuing pose jobs.
-        """
+        """Initialize the manager with configuration and queues."""
 
         self.cfg = cfg
         self.output_root = output_root
@@ -142,10 +133,7 @@ class SessionManager:
         self.current: Optional[Session] = None
         self.lock = asyncio.Lock()
 
-        self.debug = bool(cfg["runtime"].get("debug", True))
-        self.keep_on_error = bool(
-            cfg["capture"].get("keep_session_frames_on_error", True)
-        )
+        self.debug = bool(cfg["runtime"].get("debug", False))
 
         self.simulate = bool(cfg["capture"].get("simulate_camera", False))
         self.use_camera = not self.simulate
@@ -198,7 +186,6 @@ class SessionManager:
                 self.output_root,
                 freq_ms,
                 self.use_camera,
-                self.cfg,
                 capturer,
                 auto_close,
             )
@@ -264,10 +251,6 @@ class SessionManager:
             final_dir, start_dt, end_dt = session.stop()
         except Exception as e:
             session_logger.error(f"stop error: {e}")
-            if not self.keep_on_error:
-                session_logger.warning(
-                    "keep_on_error=False but stop failed: NOT removing anything."
-                )
             return
 
         if bool(self.cfg["pose"].get("enabled", True)):

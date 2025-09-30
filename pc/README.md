@@ -5,7 +5,7 @@ This directory hosts the Python application that listens for BLE triggers from a
 
 ## Features
 - Start or stop capture sessions from a physical ESP32 button.
-- Store frames in timestamped session folders for later inspection.
+- Store LZW-compressed TIFF frames in timestamped session folders for later inspection.
 - Asynchronously estimate cube pose with OpenCV-based workers.
 - Support webcams or industrial cameras such as Basler via `pypylon`.
 
@@ -84,7 +84,6 @@ Deactivate the virtual environment with `deactivate` when you are done.
 | `capture.frequency_ms` | `capture` | Interval between frame acquisitions in milliseconds. | `200` |
 | `capture.simulate_camera` | `capture` | Toggle between simulated datasets and live cameras. | `true` |
 | `capture.test_source_dir` | `capture` | Directory for sample frames when simulating. | `../image_to_be_used` |
-| `capture.stop_on_test_exhausted` | `capture` | Decide whether to stop or loop when sample images end. | `false` |
 | `pose.method` | `pose` | Select the pose solver (`cube`, `custom`). | `cube` |
 | `pose.max_parallel_jobs` | `pose` | Limit concurrent pose computations. | `3` |
 | `runtime.log_level` | `runtime` | Set logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`). | `INFO` |

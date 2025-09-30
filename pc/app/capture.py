@@ -11,8 +11,8 @@ This module provides a hierarchy of capture strategies:
   allowing deterministic runs without any camera.
 
 ``SessionManager`` (see :mod:`session_manager`) chooses between
-``OpenCvCapture`` and ``TestCapture`` based on the ``capture.use_camera`` flag
-in the configuration file.
+``OpenCvCapture`` and ``TestCapture`` driven by the ``capture.simulate_camera`` flag
+exposed in the configuration file.
 """
 
 import random
@@ -38,9 +38,7 @@ class BaseCapture(ABC):
 
     def __init__(self, cfg: dict):
         self.cfg = cfg
-        capture_cfg = cfg.get("capture", {})
-        self.image_format = capture_cfg.get("image_format", "jpg").lower()
-        self.jpeg_quality = int(capture_cfg.get("jpeg_quality", 90))
+        self.image_format = "tiff"
         self._is_open = False
         self.auto_close = True
 
@@ -124,10 +122,8 @@ class BaseCapture(ABC):
         return f"frame_{idx:06d}_{ts}.{self.image_format}"
 
     def _persist_frame(self, frame, path: Path, _log: Callable[[str, str], None]) -> None:
-        """Persist an image frame to disk using the configured format."""
+        """Persist an image frame to disk using the canonical TIFF format."""
 
-        if cv2 is None:
-            raise RuntimeError("OpenCV not available: cannot persist frames")
         self._save_image(frame, path)
 
     def _handle_empty_frame(self, log: Callable[[str, str], None]) -> None:
@@ -159,28 +155,15 @@ class BaseCapture(ABC):
     def _save_image(self, frame, path: Path) -> None:
         if frame is None:
             raise RuntimeError("Frame is None - cannot save")
+        if cv2 is None:
+            raise RuntimeError("OpenCV not available: cannot persist frames")
 
         fmt = self.image_format
-        if fmt in ("png",):
-            ok = cv2.imwrite(str(path), frame)
-        elif fmt in ("tif", "tiff"):
-            comp_map = {
-                "none": 1,
-                "lzw": 5,
-                "deflate": 8,
-                "packbits": 32773,
-            }
-            comp_name = str(self.cfg["capture"].get("tiff_compression", "none")).lower()
-            comp = comp_map.get(comp_name, 1)
-            ok = cv2.imwrite(
-                str(path),
-                frame,
-                [int(cv2.IMWRITE_TIFF_COMPRESSION), int(comp)],
-            )
+        if fmt in ("tif", "tiff"):
+            params = [int(cv2.IMWRITE_TIFF_COMPRESSION), 5]  # 5 = LZW
+            ok = cv2.imwrite(str(path), frame, params)
         else:
-            ok = cv2.imwrite(
-                str(path), frame, [int(cv2.IMWRITE_JPEG_QUALITY), self.jpeg_quality]
-            )
+            ok = cv2.imwrite(str(path), frame)
 
         if not ok:
             raise RuntimeError(f"Failed to write image: {path}")
@@ -319,9 +302,6 @@ class TestCapture(BaseCapture):
         super().__init__(cfg)
         self.src = Path(self.cfg["capture"].get("test_source_dir", "test_images"))
         self.shuffle = bool(self.cfg["capture"].get("shuffle_test_images", False))
-        self.stop_on_exhausted = bool(
-            self.cfg["capture"].get("stop_on_test_exhausted", False)
-        )
         self._imgs: list[Path] = []
         self._pos = 0
 
@@ -342,12 +322,7 @@ class TestCapture(BaseCapture):
             raise RuntimeError("Test images not loaded")
 
         img = self._imgs[self._pos]
-        self._pos += 1
-        if self._pos >= len(self._imgs):
-            if self.stop_on_exhausted:
-                raise StopIteration
-            self._pos = 0
-
+        self._pos = (self._pos + 1) % len(self._imgs)
         return img
 
     def _persist_frame(self, frame, path: Path, log: Callable[[str, str], None]) -> None:
@@ -362,14 +337,8 @@ class TestCapture(BaseCapture):
     def _on_loop_start(
         self, dest_dir: Path, freq_ms: int, log: Callable[[str, str], None]
     ) -> None:
-        log(
-            f"Test mode: copying from {self.src}, freq={freq_ms}ms, stop_on_exhausted={self.stop_on_exhausted}",
-            "info",
-        )
+        log(f"Test mode: copying from {self.src}, freq={freq_ms}ms", "info")
 
     def _on_loop_end(self, log: Callable[[str, str], None]) -> None:
         log("Test mode: loop finished", "info")
-
-    def _on_source_exhausted(self, log: Callable[[str, str], None]) -> None:
-        log("test images exhausted -> stop session", "info")
 
