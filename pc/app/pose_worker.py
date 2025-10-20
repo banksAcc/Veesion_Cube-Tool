@@ -1,11 +1,13 @@
 """Asynchronous worker that computes pose from captured frames."""
 
 import asyncio
+import csv
 import json
 import shutil
 import time
 import threading
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -70,6 +72,28 @@ class PoseWorker:
         self.wand_directions = self._build_wand_direction_map(
             self.pose_cfg.get("wand_directions", {})
         )
+
+    @staticmethod
+    def _rotation_matrix_to_euler_zyx(R: "np.ndarray") -> Optional["np.ndarray"]:
+        if np is None:
+            return None
+        matrix = np.asarray(R, dtype=float)
+        if matrix.shape != (3, 3):
+            return None
+
+        sy = float(np.sqrt(matrix[0, 0] ** 2 + matrix[1, 0] ** 2))
+        singular = sy < 1e-9
+
+        if not singular:
+            rz = float(np.arctan2(matrix[1, 0], matrix[0, 0]))
+            ry = float(np.arctan2(-matrix[2, 0], sy))
+            rx = float(np.arctan2(matrix[2, 1], matrix[2, 2]))
+        else:
+            rz = float(np.arctan2(-matrix[0, 1], matrix[1, 1]))
+            ry = float(np.arctan2(-matrix[2, 0], sy))
+            rx = 0.0
+
+        return np.array([rz, ry, rx], dtype=float)
 
     async def start(self):
         """Spawn worker tasks if pose estimation is enabled."""
@@ -298,11 +322,29 @@ class PoseWorker:
             "num_markers": int(result.get("num_markers", 0)),
         }
 
+        timestamp = self._extract_timestamp(frame_path)
+        if timestamp is not None:
+            frame_entry["timestamp"] = timestamp
+
         wand_tip = self._compute_wand_tip(result)
         if wand_tip is not None:
             tip_pos, wand_dir = wand_tip
             frame_entry["tvec_tip"] = [float(x) for x in tip_pos]
             frame_entry["wand_direction"] = [float(x) for x in wand_dir]
+
+            tip_rot = self._compute_tip_rotation(result, wand_dir)
+            if tip_rot is not None:
+                euler = self._rotation_matrix_to_euler_zyx(tip_rot)
+                if euler is not None:
+                    frame_entry["euler_tip"] = [float(x) for x in euler]
+                    frame_entry["tip_pose"] = [
+                        float(tip_pos[0]),
+                        float(tip_pos[1]),
+                        float(tip_pos[2]),
+                        float(euler[0]),
+                        float(euler[1]),
+                        float(euler[2]),
+                    ]
 
         return frame_entry, overlay
 
@@ -384,6 +426,60 @@ class PoseWorker:
         tip = tvec + wand_dir * float(self.wand_offset)
         return tip, wand_dir
 
+    def _compute_tip_rotation(self, result: dict, wand_dir: "np.ndarray") -> Optional["np.ndarray"]:
+        if np is None:
+            return None
+        base_R = np.asarray(result.get("R"), dtype=float)
+        if base_R.shape != (3, 3):
+            return None
+
+        direction = np.asarray(wand_dir, dtype=float).reshape(3,)
+        norm = float(np.linalg.norm(direction))
+        if norm < 1e-9:
+            return None
+        z_axis = direction / norm
+
+        candidates = [base_R[:, i] for i in range(3)]
+        candidates.extend([np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])])
+
+        x_axis = None
+        for cand in candidates:
+            proj = cand - np.dot(cand, z_axis) * z_axis
+            proj_norm = float(np.linalg.norm(proj))
+            if proj_norm >= 1e-6:
+                x_axis = proj / proj_norm
+                break
+        if x_axis is None:
+            return None
+
+        y_axis = np.cross(z_axis, x_axis)
+        y_norm = float(np.linalg.norm(y_axis))
+        if y_norm < 1e-6:
+            return None
+        y_axis /= y_norm
+
+        x_axis = np.cross(y_axis, z_axis)
+        x_norm = float(np.linalg.norm(x_axis))
+        if x_norm < 1e-6:
+            return None
+        x_axis /= x_norm
+
+        return np.column_stack((x_axis, y_axis, z_axis))
+
+    @staticmethod
+    def _extract_timestamp(frame_path: Path) -> Optional[str]:
+        stem = frame_path.stem
+        parts = stem.split("_")
+        if len(parts) < 3:
+            return None
+        date_part = parts[-2]
+        time_part = parts[-1]
+        try:
+            dt = datetime.strptime(f"{date_part}_{time_part}", "%Y%m%d_%H%M%S")
+        except ValueError:
+            return None
+        return dt.isoformat()
+
     def _write_results(self, job: SessionJob, final_dir: Path) -> None:
         out_json = self.output_root / f"{final_dir.name}_pose.json"
         try:
@@ -392,6 +488,41 @@ class PoseWorker:
             log.info(f"Pose results written to {out_json.name}")
         except Exception as exc:
             log.error(f"Failed to write pose results: {exc}")
+
+        out_csv = self.output_root / f"{final_dir.name}_pose.csv"
+        try:
+            with out_csv.open("w", encoding="utf-8", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(
+                    [
+                        "frame_index",
+                        "timestamp",
+                        "ok",
+                        "tip_x",
+                        "tip_y",
+                        "tip_z",
+                        "tip_rz",
+                        "tip_ry",
+                        "tip_rx",
+                    ]
+                )
+                for idx, frame in enumerate(job.results.get("frames", []), start=1):
+                    euler = frame.get("euler_tip") or [None, None, None]
+                    tip = frame.get("tvec_tip") or [None, None, None]
+                    tip_vals = ["" if v is None else f"{v:.9f}" for v in tip]
+                    euler_vals = ["" if v is None else f"{v:.9f}" for v in euler]
+                    writer.writerow(
+                        [
+                            idx,
+                            frame.get("timestamp", ""),
+                            frame.get("ok", False),
+                            *tip_vals,
+                            *euler_vals,
+                        ]
+                    )
+            log.info(f"Pose CSV written to {out_csv.name}")
+        except Exception as exc:
+            log.error(f"Failed to write pose CSV: {exc}")
 
     def _cleanup_frames(self, final_dir: Path) -> None:
         if self.delete_frames and not self.debug:
