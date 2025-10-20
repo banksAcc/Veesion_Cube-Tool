@@ -62,10 +62,15 @@ def load_tvecs(session_path: Path) -> np.ndarray:
     for frame in frames:
         if not frame.get("ok"):
             continue
-        tvec = frame.get("tvec_tip")
-        if not tvec or len(tvec) != 3:
+        if "tip_pose" in frame and isinstance(frame["tip_pose"], Sequence):
+            pose = frame["tip_pose"]
+            if len(pose) >= 3:
+                tvecs.append(pose[:3])
+                continue
+        tvec = frame.get("tvec_tip") or frame.get("tvec")
+        if not tvec or len(tvec) < 3:
             continue
-        tvecs.append(tvec)
+        tvecs.append(tvec[:3])
 
     if not tvecs:
         raise ValueError(f"No valid translation vectors found in {session_path}")
