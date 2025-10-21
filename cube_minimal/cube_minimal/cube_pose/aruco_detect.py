@@ -21,6 +21,7 @@ class MarkerDetection:
 
     id: int
     corners: np.ndarray  # (4,2) float32, order: tl, tr, br, bl
+    area: float = 0.0    # projected area in pixels
 
 
 def make_detector(dict_name: str) -> cv.aruco.ArucoDetector:
@@ -58,5 +59,7 @@ def detect_markers(img_bgr: np.ndarray, dict_name: str) -> List[MarkerDetection]
     if ids is None:
         return out
     for i, mid in enumerate(ids.flatten()):
-        out.append(MarkerDetection(int(mid), corners[i].reshape(4,2).astype(np.float32)))
+        pts = corners[i].reshape(4, 2).astype(np.float32)
+        area = float(cv.contourArea(pts))
+        out.append(MarkerDetection(int(mid), pts, area))
     return out

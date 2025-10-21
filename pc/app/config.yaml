@@ -23,6 +23,10 @@ pose:
     marker_size_mm: 54.0      # marker side (only black portion)
     cube_size_mm: 60.0        # cube side
     pair_strategy: "max_angle"    # first or max_angle
+    marker_filter:
+      active_marker_filter: false
+      try_adj_marker: true
+      min_area_px: 400.0
     wand_offset_m: 0.17
     wand_directions:
       "0": "+X"

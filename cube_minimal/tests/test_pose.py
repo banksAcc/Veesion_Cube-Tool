@@ -1,4 +1,5 @@
 import numpy as np
+import numpy as np
 import cv2 as cv
 
 from cube_minimal.cube_pose.aruco_detect import MarkerDetection

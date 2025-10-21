@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 from cube_minimal.cube_pose.api import estimate_cube_from_image
+from cube_minimal.cube_pose.filtering import MarkerFilter
 
 from logger import get_logger
 
@@ -41,6 +42,7 @@ class SessionJob:
     end_iso: Optional[str] = None
     finished: threading.Event = field(default_factory=threading.Event)
     task: Optional[asyncio.Task] = None
+    marker_filter: Optional[MarkerFilter] = None
 
 
 class PoseWorker:
@@ -71,6 +73,13 @@ class PoseWorker:
         self.wand_offset = float(self.pose_cfg.get("wand_offset_m", 0.0))
         self.wand_directions = self._build_wand_direction_map(
             self.pose_cfg.get("wand_directions", {})
+        )
+        filter_cfg = self.pose_cfg.get("marker_filter", {})
+        self.marker_filter_active = bool(filter_cfg.get("active_marker_filter", False))
+        self.marker_filter_try_adj = bool(filter_cfg.get("try_adj_marker", False))
+        area_threshold = filter_cfg.get("min_area_px")
+        self.marker_filter_area_threshold = (
+            float(area_threshold) if area_threshold is not None else None
         )
 
     @staticmethod
@@ -154,6 +163,11 @@ class PoseWorker:
             freq_ms=freq_ms,
             start_iso=payload["start"],
             results=results,
+            marker_filter=MarkerFilter(
+                active=self.marker_filter_active,
+                try_adjust=self.marker_filter_try_adj,
+                area_threshold_px=self.marker_filter_area_threshold,
+            ),
         )
         job.task = asyncio.create_task(self._run_session(job))
         self.sessions[session_key] = job
@@ -208,7 +222,9 @@ class PoseWorker:
                     if time.time() - mtime < self.file_settle:
                         continue
 
-                    frame_result, overlay = self._process_frame(frame_path)
+                    frame_result, overlay = self._process_frame(
+                        frame_path, job, mtime
+                    )
                     job.results["frames"].append(frame_result)
                     job.processed.add(frame_path.name)
 
@@ -234,9 +250,11 @@ class PoseWorker:
             self._cleanup_frames(final_dir)
             self._notify_ble("COMPUTATION END")
 
-    def _process_frame(self, frame_path: Path) -> Tuple[dict, Optional["np.ndarray"]]:
+    def _process_frame(
+        self, frame_path: Path, job: SessionJob, frame_timestamp: Optional[float]
+    ) -> Tuple[dict, Optional["np.ndarray"]]:
         if self.method == "cube" and HAS_CV and hasattr(cv2, "aruco"):
-            return self._process_cube_frame(frame_path)
+            return self._process_cube_frame(frame_path, job, frame_timestamp)
         if self.method == "custom":
             return (
                 {
@@ -255,7 +273,9 @@ class PoseWorker:
             None,
         )
 
-    def _process_cube_frame(self, frame_path: Path) -> Tuple[dict, Optional["np.ndarray"]]:
+    def _process_cube_frame(
+        self, frame_path: Path, job: SessionJob, frame_timestamp: Optional[float]
+    ) -> Tuple[dict, Optional["np.ndarray"]]:
         pose_cfg = self.pose_cfg
         dict_name = pose_cfg.get("dictionary", "4X4_50")
         marker_size = float(pose_cfg.get("marker_size_mm", 55.0)) / 1000.0
@@ -282,6 +302,8 @@ class PoseWorker:
                 cube_size,
                 pair_strategy=pair_strategy,
                 return_overlay=True,
+                marker_filter=job.marker_filter,
+                frame_timestamp=frame_timestamp,
             )
         except FileNotFoundError:
             return (
@@ -292,12 +314,15 @@ class PoseWorker:
                 },
                 None,
             )
-        except ValueError:
+        except ValueError as exc:
+            reason = "no_markers"
+            if "filter" in str(exc).lower():
+                reason = "markers_filtered"
             return (
                 {
                     "file": frame_path.name,
                     "ok": False,
-                    "reason": "no_markers",
+                    "reason": reason,
                 },
                 None,
             )
@@ -321,6 +346,13 @@ class PoseWorker:
             "reproj_err": None,
             "num_markers": int(result.get("num_markers", 0)),
         }
+
+        frame_entry["discarded_marker_ids"] = list(
+            result.get("discarded_marker_ids", [])
+        )
+        frame_entry["corrected_marker_ids"] = list(
+            result.get("corrected_marker_ids", [])
+        )
 
         timestamp = self._extract_timestamp(frame_path)
         if timestamp is not None:

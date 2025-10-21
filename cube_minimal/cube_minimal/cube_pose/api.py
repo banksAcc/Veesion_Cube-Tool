@@ -1,6 +1,6 @@
 ﻿"""High level API to estimate the pose of a cube from a single image."""
 
-from typing import Dict, Any, Union
+from typing import Dict, Any, Union, Optional
 import numpy as np
 import cv2 as cv
 
@@ -8,6 +8,7 @@ from .camera_io import load_camera
 from .aruco_detect import detect_markers
 from .marker_pose import estimate_marker_poses
 from .cube_pose import estimate_cube_pose
+from .filtering import MarkerFilter
 
 
 def estimate_cube_from_image(
@@ -18,6 +19,8 @@ def estimate_cube_from_image(
     cube_size: float,
     pair_strategy: str = "first",
     return_overlay: bool = False,
+    marker_filter: Optional[MarkerFilter] = None,
+    frame_timestamp: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Estimate the cube pose from a single image.
@@ -41,6 +44,12 @@ def estimate_cube_from_image(
         selects the pair with the most orthogonal normals.
     return_overlay:
         If ``True`` an image with diagnostic overlay is also returned.
+    marker_filter:
+        Optional :class:`~cube_minimal.cube_pose.filtering.MarkerFilter` instance
+        used to discard or adjust marker poses before estimating the cube pose.
+    frame_timestamp:
+        Optional timestamp (in seconds) associated with the frame, forwarded to
+        ``marker_filter`` when provided.
 
     Returns
     -------
@@ -52,7 +61,9 @@ def estimate_cube_from_image(
         - ``"R"``: ``(3,3)`` rotation matrix of the cube
         - ``"quat"``: ``(4,)`` quaternion ``(w, x, y, z)``
         - ``"num_markers"``: number of markers used
-        - ``"markers"``: list of marker poses used (id, rvec, tvec, R)
+        - ``"markers"``: list of marker poses used (id, rvec, tvec, R, area)
+        - ``"discarded_marker_ids"``: marker ids removed by the filter
+        - ``"corrected_marker_ids"``: marker ids adjusted by the filter
         - ``"overlay"``: optional BGR image if ``return_overlay`` is ``True``
 
     Raises
@@ -99,16 +110,25 @@ def estimate_cube_from_image(
     poses = estimate_marker_poses(detections, K, dist, marker_size)
 
     # Cube pose
+    filter_result = None
+    if marker_filter is not None:
+        filter_result = marker_filter.apply(detections, poses, timestamp=frame_timestamp)
+        poses = [mp for _, mp in filter_result.accepted]
+        detections = [det for det, _ in filter_result.accepted]
+        if len(poses) == 0:
+            raise ValueError("No markers remaining after filtering.")
+
     cube = estimate_cube_pose(poses, cube_size, pair_strategy=pair_strategy)
 
     marker_dicts: list[dict[str, Any]] = []
-    for mp in poses:
+    for det, mp in zip(detections, poses):
         marker_dicts.append(
             {
                 "id": int(mp.id),
                 "rvec": mp.rvec.reshape(3).tolist(),
                 "tvec": mp.tvec.reshape(3).tolist(),
                 "R": mp.R.tolist(),
+                "area": float(getattr(det, "area", 0.0)),
             }
         )
 
@@ -142,5 +162,7 @@ def estimate_cube_from_image(
         "quat": cube.quat,
         "num_markers": len(poses),
         "markers": marker_dicts,
+        "discarded_marker_ids": [] if filter_result is None else filter_result.discarded_ids,
+        "corrected_marker_ids": [] if filter_result is None else filter_result.corrected_ids,
         "overlay": overlay,
     }
