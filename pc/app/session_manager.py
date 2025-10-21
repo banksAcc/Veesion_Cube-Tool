@@ -19,8 +19,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from concurrent.futures import TimeoutError
+
 from capture import BaseCapture, OpenCvCapture, PylonCapture, TestCapture
 from logger import get_logger
+from stream import FramePacket
 
 FMT = "%Y-%m-%d_%H-%M-%S"  # readable and sortable
 
@@ -39,6 +42,9 @@ class Session:
         use_camera: bool,
         capturer: BaseCapture,
         auto_close: bool,
+        loop: asyncio.AbstractEventLoop,
+        frame_queue: asyncio.Queue,
+        save_frames: bool,
     ):
         """Create a new session and prepare the capture directory.
 
@@ -58,12 +64,14 @@ class Session:
         self.use_camera = use_camera
         self.capturer = capturer
         self.auto_close = bool(auto_close)
+        self.loop = loop
+        self.frame_queue = frame_queue
+        self.save_frames = bool(save_frames)
 
         self.start_dt = datetime.now()
         self.end_dt: Optional[datetime] = None
 
-        # initial directory "ongoing"
-        self.dir = root / f"session_{self.start_dt.strftime(FMT)}__ongoing"
+        self.dir = root / f"session_{self.start_dt.strftime(FMT)}"
         self.dir.mkdir(parents=True, exist_ok=True)
 
         self.stop_evt = threading.Event()
@@ -96,28 +104,55 @@ class Session:
         self.capturer.set_auto_close(self.auto_close)
         self.thread = threading.Thread(
             target=self.capturer.capture_loop,
-            args=(self.dir, self.freq_ms, self.stop_evt, self.log_capture),
+            args=(
+                self.dir,
+                self.freq_ms,
+                self.stop_evt,
+                self.log_capture,
+                self._handle_frame,
+            ),
             name=f"capture-{self.start_dt.strftime('%H%M%S')}",
             daemon=True,
         )
         self.thread.start()
 
     def stop(self):
-        """Stop capture and rename directory with start and end timestamps."""
+        """Stop capture and signal the end of the frame stream."""
         self.end_dt = datetime.now()
         self._log(f"stop @ {self.end_dt.isoformat()}")
         self.stop_evt.set()
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=5.0)
-        # rename folder with start__end
-        new_name = f"session_{self.start_dt.strftime(FMT)}__{self.end_dt.strftime(FMT)}"
-        final_dir = self.root / new_name
-        try:
-            self.dir.rename(final_dir)
-            self.dir = final_dir
-        except Exception as e:
-            self._log(f"rename failed: {e}", level="error")
+        self._signal_stream_closed()
         return self.dir, self.start_dt, self.end_dt
+
+    def _handle_frame(self, frame, filename: str, captured_at: float, index: int) -> None:
+        packet = FramePacket(
+            session_key=self.start_dt.isoformat(),
+            index=index,
+            timestamp=captured_at,
+            frame=frame,
+            filename=filename,
+            save_path=(self.dir / filename) if self.save_frames else None,
+        )
+        fut = asyncio.run_coroutine_threadsafe(self.frame_queue.put(packet), self.loop)
+        try:
+            fut.result(timeout=5.0)
+        except TimeoutError:
+            self.log_capture("Timed out while queueing frame", "warning")
+        except Exception as exc:  # pragma: no cover - unexpected threading issue
+            self.log_capture(f"Failed to queue frame: {exc}", "error")
+
+    def _signal_stream_closed(self) -> None:
+        try:
+            fut = asyncio.run_coroutine_threadsafe(
+                self.frame_queue.put(None), self.loop
+            )
+            fut.result(timeout=5.0)
+        except TimeoutError:
+            self.log_capture("Timed out closing frame queue", "warning")
+        except Exception:
+            pass
 
 
 class SessionManager:
@@ -138,6 +173,8 @@ class SessionManager:
         self.simulate = bool(cfg["capture"].get("simulate_camera", False))
         self.use_camera = not self.simulate
         self.keep_camera_warm = bool(cfg["capture"].get("keep_camera_warm", True))
+        self.save_frames = bool(cfg["capture"].get("save_frames", False))
+        self.frame_queue_size = int(cfg["capture"].get("frame_queue_size", 4))
         self.capturer: Optional[BaseCapture] = None
 
     def _capture_log(self, msg: str, level: str = "info") -> None:
@@ -182,12 +219,17 @@ class SessionManager:
                 capturer = TestCapture(self.cfg)
                 auto_close = True
 
+            loop = asyncio.get_running_loop()
+            frame_queue: asyncio.Queue = asyncio.Queue(maxsize=self.frame_queue_size)
             session = Session(
                 self.output_root,
                 freq_ms,
                 self.use_camera,
                 capturer,
                 auto_close,
+                loop,
+                frame_queue,
+                self.save_frames,
             )
             self.current = session
             session.start()
@@ -198,8 +240,12 @@ class SessionManager:
                     "action": "start",
                     "session_key": session.start_dt.isoformat(),
                     "session_dir": str(session.dir),
+                    "frame_queue": frame_queue,
                     "start": session.start_dt.isoformat(),
                     "freq_ms": session.freq_ms,
+                    "label": session.dir.name,
+                    "save_frames": session.save_frames,
+                    "save_dir": str(session.dir) if session.save_frames else None,
                 }
                 await self.pose_queue.put(pose_job)
 
@@ -261,6 +307,8 @@ class SessionManager:
                 "start": start_dt.isoformat(),
                 "end": end_dt.isoformat(),
                 "freq_ms": session.freq_ms,
+                "label": final_dir.name,
+                "save_dir": str(final_dir) if session.save_frames else None,
             }
             await self.pose_queue.put(pose_job)
 
