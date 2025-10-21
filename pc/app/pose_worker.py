@@ -1,10 +1,9 @@
 """Asynchronous worker that computes pose from captured frames."""
 
 import asyncio
+import csv
 import json
-import shutil
-import time
-import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Optional, Tuple
@@ -12,6 +11,7 @@ from typing import Dict, Optional, Tuple
 from cube_minimal.cube_pose.api import estimate_cube_from_image
 
 from logger import get_logger
+from stream import FramePacket
 
 try:
     import cv2
@@ -22,22 +22,20 @@ except Exception:
 
 log = get_logger("POSE")
 
-FRAME_EXTS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
-
-
 @dataclass
 class SessionJob:
     """Track state for an in-flight pose estimation session."""
 
     key: str
-    current_dir: Path
+    frame_queue: asyncio.Queue
     freq_ms: int
     start_iso: str
     results: dict
-    processed: set[str] = field(default_factory=set)
-    final_dir: Optional[Path] = None
+    label: str
+    save_frames: bool
+    save_dir: Optional[Path] = None
     end_iso: Optional[str] = None
-    finished: threading.Event = field(default_factory=threading.Event)
+    finished: asyncio.Event = field(default_factory=asyncio.Event)
     task: Optional[asyncio.Task] = None
 
 
@@ -59,17 +57,34 @@ class PoseWorker:
 
         self.sessions: Dict[str, SessionJob] = {}
         self.method = cfg["pose"].get("method", "cube").lower()
-        self.delete_frames = bool(cfg["pose"].get("delete_frames_after_processing", True))
-        self.debug = bool(cfg["runtime"].get("debug", True))
-        self.keep_frames = (not self.delete_frames) or self.debug
-        self.file_settle = max(0.0, float(cfg["pose"].get("stream_file_settle_ms", 120)) / 1000.0)
-        self.idle_checks = int(cfg["pose"].get("stream_idle_checks", 3))
-        self.poll_floor = float(cfg["pose"].get("stream_poll_interval_ms", 100)) / 1000.0
         self.pose_cfg = cfg["pose"].get("cube", {})
         self.wand_offset = float(self.pose_cfg.get("wand_offset_m", 0.0))
         self.wand_directions = self._build_wand_direction_map(
             self.pose_cfg.get("wand_directions", {})
         )
+        self.save_executor = ThreadPoolExecutor(max_workers=1)
+
+    @staticmethod
+    def _rotation_matrix_to_euler_zyx(R: "np.ndarray") -> Optional["np.ndarray"]:
+        if np is None:
+            return None
+        matrix = np.asarray(R, dtype=float)
+        if matrix.shape != (3, 3):
+            return None
+
+        sy = float(np.sqrt(matrix[0, 0] ** 2 + matrix[1, 0] ** 2))
+        singular = sy < 1e-9
+
+        if not singular:
+            rz = float(np.arctan2(matrix[1, 0], matrix[0, 0]))
+            ry = float(np.arctan2(-matrix[2, 0], sy))
+            rx = float(np.arctan2(matrix[2, 1], matrix[2, 2]))
+        else:
+            rz = float(np.arctan2(-matrix[0, 1], matrix[1, 1]))
+            ry = float(np.arctan2(-matrix[2, 0], sy))
+            rx = 0.0
+
+        return np.array([rz, ry, rx], dtype=float)
 
     async def start(self):
         """Spawn worker tasks if pose estimation is enabled."""
@@ -84,6 +99,10 @@ class PoseWorker:
         """Signal workers to exit and wait for completion."""
         for job in list(self.sessions.values()):
             job.finished.set()
+            try:
+                job.frame_queue.put_nowait(None)
+            except asyncio.QueueFull:
+                pass
         for _ in self.tasks:
             await self.queue.put(None)
         await asyncio.gather(*self.tasks, return_exceptions=True)
@@ -93,6 +112,7 @@ class PoseWorker:
             return_exceptions=True,
         )
         self.sessions.clear()
+        self.save_executor.shutdown(wait=True)
 
     async def _worker(self):
         """Consume jobs from the queue and dispatch session handling."""
@@ -115,9 +135,13 @@ class PoseWorker:
             return
 
         session_dir = Path(payload["session_dir"])
+        frame_queue: asyncio.Queue = payload["frame_queue"]
         freq_ms = int(payload["freq_ms"])
+        label = payload.get("label") or session_dir.name
+        save_frames = bool(payload.get("save_frames", False))
+        save_dir = Path(payload["save_dir"]) if payload.get("save_dir") else None
         results = {
-            "session": session_dir.name,
+            "session": label,
             "start": payload["start"],
             "end": None,
             "frequency_ms": freq_ms,
@@ -126,14 +150,17 @@ class PoseWorker:
         }
         job = SessionJob(
             key=session_key,
-            current_dir=session_dir,
+            frame_queue=frame_queue,
             freq_ms=freq_ms,
             start_iso=payload["start"],
             results=results,
+            label=label,
+            save_frames=save_frames,
+            save_dir=save_dir,
         )
         job.task = asyncio.create_task(self._run_session(job))
         self.sessions[session_key] = job
-        log.info(f"Pose session started for {session_dir.name}")
+        log.info(f"Pose session started for {label}")
 
     def _handle_end(self, payload: dict) -> None:
         session_key = payload["session_key"]
@@ -141,82 +168,90 @@ class PoseWorker:
         if job is None:
             log.warning(f"Pose END for unknown session {session_key}")
             return
-        job.final_dir = Path(payload["session_dir"])
+        if payload.get("save_dir"):
+            job.save_dir = Path(payload["save_dir"])
         job.end_iso = payload.get("end")
         job.results["end"] = job.end_iso
         job.finished.set()
-        log.info(f"Pose session finishing for {job.final_dir.name}")
+        log.info(f"Pose session finishing for {job.label}")
 
     async def _run_session(self, job: SessionJob):
         try:
-            await asyncio.to_thread(self._process_session_stream, job)
+            await self._consume_session(job)
         finally:
             self.sessions.pop(job.key, None)
 
-    def _process_session_stream(self, job: SessionJob) -> None:
-        poll_interval = max(self.poll_floor, job.freq_ms / 1000.0 / 2.0)
-        idle_rounds = 0
-        active_dir = job.current_dir
+    async def _consume_session(self, job: SessionJob) -> None:
         self._notify_ble("COMPUTATION START")
+        loop = asyncio.get_running_loop()
         try:
             while True:
-                target_dir = job.final_dir if job.final_dir and job.final_dir.exists() else active_dir
-                try:
-                    frames = sorted(
-                        p for p in target_dir.glob("*") if p.suffix.lower() in FRAME_EXTS
-                    )
-                except FileNotFoundError:
-                    time.sleep(poll_interval)
+                packet = await job.frame_queue.get()
+                if packet is None:
+                    if job.finished.is_set():
+                        break
+                    await asyncio.sleep(max(0.001, job.freq_ms / 1000.0))
                     continue
 
-                new_frames = [p for p in frames if p.name not in job.processed]
-                if new_frames:
-                    idle_rounds = 0
-                else:
-                    idle_rounds += 1
+                frame_result, overlay = await asyncio.to_thread(
+                    self._process_frame_packet, packet
+                )
+                job.results["frames"].append(frame_result)
 
-                for frame_path in new_frames:
-                    try:
-                        mtime = frame_path.stat().st_mtime
-                    except FileNotFoundError:
-                        continue
+                if job.save_frames:
+                    await self._save_packet(job, packet, overlay, loop)
 
-                    if time.time() - mtime < self.file_settle:
-                        continue
+                packet.frame = None  # release reference as soon as possible
 
-                    frame_result, overlay = self._process_frame(frame_path)
-                    job.results["frames"].append(frame_result)
-                    job.processed.add(frame_path.name)
-
-                    if overlay is not None and self.keep_frames and HAS_CV:
-                        try:
-                            cv2.imwrite(str(frame_path), overlay)
-                        except Exception as exc:
-                            log.warning(f"overlay write failed: {exc}")
-
-                if job.finished.is_set() and idle_rounds >= self.idle_checks:
-                    break
-
-                if job.final_dir and job.final_dir.exists():
-                    active_dir = job.final_dir
-
-                time.sleep(poll_interval)
-        finally:
-            final_dir = job.final_dir or active_dir
-            job.results["session"] = final_dir.name
             if job.end_iso is None:
                 job.results["end"] = job.results.get("end") or job.start_iso
-            self._write_results(job, final_dir)
-            self._cleanup_frames(final_dir)
+        finally:
+            self._write_results(job)
             self._notify_ble("COMPUTATION END")
 
-    def _process_frame(self, frame_path: Path) -> Tuple[dict, Optional["np.ndarray"]]:
+    async def _save_packet(
+        self,
+        job: SessionJob,
+        packet: FramePacket,
+        overlay,
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        if not HAS_CV:
+            return
+        image = overlay if overlay is not None else packet.frame
+        if image is None:
+            return
+
+        path = packet.save_path
+        if path is None:
+            if job.save_dir is None:
+                return
+            path = Path(job.save_dir) / packet.filename
+
+        def _write():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                ok = cv2.imwrite(str(path), image)
+            except Exception as exc:  # pragma: no cover - depends on cv2 backend
+                log.warning(f"Failed to write frame {path.name}: {exc}")
+                return
+            if not ok:
+                log.warning(f"cv2.imwrite returned False for {path.name}")
+
+        try:
+            await loop.run_in_executor(self.save_executor, _write)
+        except Exception as exc:  # pragma: no cover - executor errors are rare
+            log.warning(f"Failed to persist frame {path.name}: {exc}")
+
+    def _process_frame_packet(
+        self, packet: FramePacket
+    ) -> Tuple[dict, Optional["np.ndarray"]]:
         if self.method == "cube" and HAS_CV and hasattr(cv2, "aruco"):
-            return self._process_cube_frame(frame_path)
+            return self._process_cube_frame(packet)
         if self.method == "custom":
             return (
                 {
-                    "file": frame_path.name,
+                    "file": packet.filename,
                     "ok": False,
                     "reason": "custom_not_implemented",
                 },
@@ -224,14 +259,14 @@ class PoseWorker:
             )
         return (
             {
-                "file": frame_path.name,
+                "file": packet.filename,
                 "ok": False,
                 "reason": "missing_opencv_contrib_or_invalid_method",
             },
             None,
         )
 
-    def _process_cube_frame(self, frame_path: Path) -> Tuple[dict, Optional["np.ndarray"]]:
+    def _process_cube_frame(self, packet: FramePacket) -> Tuple[dict, Optional["np.ndarray"]]:
         pose_cfg = self.pose_cfg
         dict_name = pose_cfg.get("dictionary", "4X4_50")
         marker_size = float(pose_cfg.get("marker_size_mm", 55.0)) / 1000.0
@@ -242,7 +277,7 @@ class PoseWorker:
         if not calib_path:
             return (
                 {
-                    "file": frame_path.name,
+                    "file": packet.filename,
                     "ok": False,
                     "reason": "no_calibration",
                 },
@@ -251,7 +286,7 @@ class PoseWorker:
 
         try:
             result = estimate_cube_from_image(
-                str(frame_path),
+                packet.frame,
                 calib_path,
                 dict_name,
                 marker_size,
@@ -259,19 +294,10 @@ class PoseWorker:
                 pair_strategy=pair_strategy,
                 return_overlay=True,
             )
-        except FileNotFoundError:
-            return (
-                {
-                    "file": frame_path.name,
-                    "ok": False,
-                    "reason": "read_fail",
-                },
-                None,
-            )
         except ValueError:
             return (
                 {
-                    "file": frame_path.name,
+                    "file": packet.filename,
                     "ok": False,
                     "reason": "no_markers",
                 },
@@ -280,7 +306,7 @@ class PoseWorker:
         except Exception:
             return (
                 {
-                    "file": frame_path.name,
+                    "file": packet.filename,
                     "ok": False,
                     "reason": "pose_fail",
                 },
@@ -290,7 +316,7 @@ class PoseWorker:
         overlay = result.get("overlay")
 
         frame_entry = {
-            "file": frame_path.name,
+            "file": packet.filename,
             "ok": True,
             "rvec": [float(x) for x in np.asarray(result["rvec"]).flatten()],
             "tvec": [float(x) for x in np.asarray(result["tvec"]).flatten()],
@@ -298,11 +324,27 @@ class PoseWorker:
             "num_markers": int(result.get("num_markers", 0)),
         }
 
+        frame_entry["timestamp"] = packet.iso_timestamp
+
         wand_tip = self._compute_wand_tip(result)
         if wand_tip is not None:
             tip_pos, wand_dir = wand_tip
             frame_entry["tvec_tip"] = [float(x) for x in tip_pos]
             frame_entry["wand_direction"] = [float(x) for x in wand_dir]
+
+            tip_rot = self._compute_tip_rotation(result, wand_dir)
+            if tip_rot is not None:
+                euler = self._rotation_matrix_to_euler_zyx(tip_rot)
+                if euler is not None:
+                    frame_entry["euler_tip"] = [float(x) for x in euler]
+                    frame_entry["tip_pose"] = [
+                        float(tip_pos[0]),
+                        float(tip_pos[1]),
+                        float(tip_pos[2]),
+                        float(euler[0]),
+                        float(euler[1]),
+                        float(euler[2]),
+                    ]
 
         return frame_entry, overlay
 
@@ -384,8 +426,49 @@ class PoseWorker:
         tip = tvec + wand_dir * float(self.wand_offset)
         return tip, wand_dir
 
-    def _write_results(self, job: SessionJob, final_dir: Path) -> None:
-        out_json = self.output_root / f"{final_dir.name}_pose.json"
+    def _compute_tip_rotation(self, result: dict, wand_dir: "np.ndarray") -> Optional["np.ndarray"]:
+        if np is None:
+            return None
+        base_R = np.asarray(result.get("R"), dtype=float)
+        if base_R.shape != (3, 3):
+            return None
+
+        direction = np.asarray(wand_dir, dtype=float).reshape(3,)
+        norm = float(np.linalg.norm(direction))
+        if norm < 1e-9:
+            return None
+        z_axis = direction / norm
+
+        candidates = [base_R[:, i] for i in range(3)]
+        candidates.extend([np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])])
+
+        x_axis = None
+        for cand in candidates:
+            proj = cand - np.dot(cand, z_axis) * z_axis
+            proj_norm = float(np.linalg.norm(proj))
+            if proj_norm >= 1e-6:
+                x_axis = proj / proj_norm
+                break
+        if x_axis is None:
+            return None
+
+        y_axis = np.cross(z_axis, x_axis)
+        y_norm = float(np.linalg.norm(y_axis))
+        if y_norm < 1e-6:
+            return None
+        y_axis /= y_norm
+
+        x_axis = np.cross(y_axis, z_axis)
+        x_norm = float(np.linalg.norm(x_axis))
+        if x_norm < 1e-6:
+            return None
+        x_axis /= x_norm
+
+        return np.column_stack((x_axis, y_axis, z_axis))
+
+    def _write_results(self, job: SessionJob) -> None:
+        label = job.label
+        out_json = self.output_root / f"{label}_pose.json"
         try:
             with out_json.open("w", encoding="utf-8") as f:
                 json.dump(job.results, f, indent=2)
@@ -393,17 +476,40 @@ class PoseWorker:
         except Exception as exc:
             log.error(f"Failed to write pose results: {exc}")
 
-    def _cleanup_frames(self, final_dir: Path) -> None:
-        if self.delete_frames and not self.debug:
-            try:
-                shutil.rmtree(final_dir)
-                log.info(f"{final_dir.name} deleted (frames removed)")
-            except Exception as exc:
-                log.error(f"rmtree error: {exc}")
-        else:
-            log.info(
-                f"frames kept (delete_frames={self.delete_frames}, debug={self.debug})"
-            )
+        out_csv = self.output_root / f"{label}_pose.csv"
+        try:
+            with out_csv.open("w", encoding="utf-8", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(
+                    [
+                        "frame_index",
+                        "timestamp",
+                        "ok",
+                        "tip_x",
+                        "tip_y",
+                        "tip_z",
+                        "tip_rz",
+                        "tip_ry",
+                        "tip_rx",
+                    ]
+                )
+                for idx, frame in enumerate(job.results.get("frames", []), start=1):
+                    euler = frame.get("euler_tip") or [None, None, None]
+                    tip = frame.get("tvec_tip") or [None, None, None]
+                    tip_vals = ["" if v is None else f"{v:.9f}" for v in tip]
+                    euler_vals = ["" if v is None else f"{v:.9f}" for v in euler]
+                    writer.writerow(
+                        [
+                            idx,
+                            frame.get("timestamp", ""),
+                            frame.get("ok", False),
+                            *tip_vals,
+                            *euler_vals,
+                        ]
+                    )
+            log.info(f"Pose CSV written to {out_csv.name}")
+        except Exception as exc:
+            log.error(f"Failed to write pose CSV: {exc}")
 
     def _notify_ble(self, message: str) -> None:
         try:

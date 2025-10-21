@@ -6,6 +6,8 @@
 capture:
   frequency_ms: 200
   output_root: "../captures"       # can also be in OneDrive; keeping it local is faster
+  save_frames: false                # when true, persist frames with pose overlays if available
+  frame_queue_size: 4               # max number of frames waiting in the in-memory stream
   simulate_camera: false           # true = test mode (uses images from a folder)
   camera_type: "pylon"             # "opencv" for webcam or "pylon" for basler.
   camera_id: 0                     # webcam id (0 usually works)
@@ -17,7 +19,6 @@ pose:
   enabled: true
   method: "cube"                   # "cube" | "custom"
   max_parallel_jobs: 3             # 3 is fine (CPU permitting)
-  delete_frames_after_processing: false
   cube:
     dictionary: "4X4_50"
     marker_size_mm: 54.0      # marker side (only black portion)
@@ -31,7 +32,6 @@ pose:
       "3": "+X"
       "4": "-Z"
   camera_calibration_npz: "../calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
-  stream_file_settle_ms: 120  # time before start process image saved on disk
 
 runtime:
   debug: false                      # extra debug behavior

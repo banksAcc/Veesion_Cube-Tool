@@ -5,8 +5,8 @@ This directory hosts the Python application that listens for BLE triggers from a
 
 ## Features
 - Start or stop capture sessions from a physical ESP32 button.
-- Store LZW-compressed TIFF frames in timestamped session folders for later inspection.
-- Asynchronously estimate cube pose with OpenCV-based workers.
+- Stream captured frames in-memory to the pose worker for low-latency processing.
+- Optionally persist frames (with overlays when available) by enabling `capture.save_frames`.
 - Support webcams or industrial cameras such as Basler via `pypylon`.
 
 ## Prerequisites
@@ -55,8 +55,9 @@ Deactivate the virtual environment with `deactivate` when you are done.
 1. Copy `app/config.example.yaml` to `app/config.yaml` if the example file is available. Otherwise duplicate the existing `config.yaml` before editing.
 2. For simulated runs, set `capture.simulate_camera: true` and point `capture.test_source_dir` to `../image_to_be_used` or another folder with sample frames.
 3. For real hardware, set `capture.simulate_camera: false`, choose `capture.camera_type` (`webcam`, `ip`, `basler`, etc.), and configure `capture.camera_id`, `capture.camera_serial`, or `capture.camera_ip` as required.
-4. Confirm `pose.camera_calibration_npz` points to a valid calibration file inside `calib/`.
-5. Adjust logging preferences with `runtime.log_level` and `runtime.log_to_file` if you need more diagnostics.
+4. Decide whether to persist frames by setting `capture.save_frames` (disabled by default to favour throughput).
+5. Confirm `pose.camera_calibration_npz` points to a valid calibration file inside `calib/`.
+6. Adjust logging preferences with `runtime.log_level` and `runtime.log_to_file` if you need more diagnostics.
 
 ## Execution
 - Simulated mode (no camera): ensure `capture.simulate_camera: true`, then run
@@ -83,6 +84,8 @@ Deactivate the virtual environment with `deactivate` when you are done.
 | --- | --- | --- | --- |
 | `capture.frequency_ms` | `capture` | Interval between frame acquisitions in milliseconds. | `200` |
 | `capture.simulate_camera` | `capture` | Toggle between simulated datasets and live cameras. | `true` |
+| `capture.save_frames` | `capture` | Enable asynchronous persistence of frames with overlays when available. | `false` |
+| `capture.frame_queue_size` | `capture` | Number of frames buffered between capture and pose processing. | `4` |
 | `capture.test_source_dir` | `capture` | Directory for sample frames when simulating. | `../image_to_be_used` |
 | `pose.method` | `pose` | Select the pose solver (`cube`, `custom`). | `cube` |
 | `pose.max_parallel_jobs` | `pose` | Limit concurrent pose computations. | `3` |

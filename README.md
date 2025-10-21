@@ -44,6 +44,24 @@ An ESP32 inside the pen sends a BLE trigger; the PC listens for the event, grabs
 3. ArUco markers on the cube are detected and the cube pose is estimated.
 4. A fixed transform gives the pen‑tip pose, which can be logged or streamed.
 
+### Pose result artifacts
+
+Each capture session produces both a JSON summary and a CSV table beside the
+session folder (e.g. `session_<start>__<end>_pose.json` / `.csv`). The JSON file
+stores a list of frame objects containing:
+
+* `tvec_tip`: Cartesian tip position expressed in metres relative to the camera.
+* `wand_direction`: Normalised tip direction vector in camera coordinates.
+* `euler_tip`: Tip orientation expressed as Z‑Y‑X intrinsic Euler angles
+  (`rz`, `ry`, `rx`) in radians.
+* `tip_pose`: Convenience tuple `(x, y, z, rz, ry, rx)` merging position and
+  orientation. Downstream consumers should prefer this when available.
+
+The accompanying CSV mirrors the JSON content with one row per frame and the
+columns: `frame_index`, `timestamp`, `ok`, `tip_x`, `tip_y`, `tip_z`, `tip_rz`,
+`tip_ry`, `tip_rx`. Numerical values are emitted in metres/radians to ease data
+analysis in spreadsheets or plotting tools.
+
 ## Quick start
 
 ### Set up the PC environment
