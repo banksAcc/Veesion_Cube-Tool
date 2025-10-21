@@ -20,7 +20,10 @@ import shutil
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - typing helper
+    import numpy as np
 
 try:
     import cv2
@@ -71,6 +74,7 @@ class BaseCapture(ABC):
         freq_ms: int,
         stop_evt,
         log: Callable[[str, str], None],
+        frame_callback: Optional[Callable[["np.ndarray", str, float, int], None]] = None,
     ) -> None:
         """Template loop used by concrete capture implementations."""
 
@@ -102,11 +106,18 @@ class BaseCapture(ABC):
                 else:
                     idx += 1
                     fname = self._generate_filename(idx)
-                    dst = dest_dir / fname
-                    try:
-                        self._persist_frame(frame, dst, log)
-                    except Exception as exc:
-                        log(f"Persist error: {exc}", "error")
+                    captured_at = time.time()
+                    if frame_callback is not None:
+                        try:
+                            frame_callback(frame, fname, captured_at, idx)
+                        except Exception as exc:
+                            log(f"Frame callback error: {exc}", "error")
+                    else:
+                        dst = dest_dir / fname
+                        try:
+                            self._persist_frame(frame, dst, log)
+                        except Exception as exc:
+                            log(f"Persist error: {exc}", "error")
 
                 next_t += period
                 sleep = next_t - time.perf_counter()
@@ -321,13 +332,25 @@ class TestCapture(BaseCapture):
         if not self._imgs:
             raise RuntimeError("Test images not loaded")
 
-        img = self._imgs[self._pos]
+        img_path = self._imgs[self._pos]
         self._pos = (self._pos + 1) % len(self._imgs)
-        return img
+
+        if cv2 is None:
+            raise RuntimeError("OpenCV not available: cannot load test frame")
+
+        frame = cv2.imread(str(img_path))
+        if frame is None:
+            log(f"Failed to read test frame {img_path}", "warning")
+            return None
+        return frame
 
     def _persist_frame(self, frame, path: Path, log: Callable[[str, str], None]) -> None:
-        log(f"Copying {Path(frame).name} -> {path.name}", "info")
-        shutil.copy2(frame, path)
+        if isinstance(frame, (str, Path)):
+            src = Path(frame)
+            log(f"Copying {src.name} -> {path.name}", "info")
+            shutil.copy2(src, path)
+            return
+        super()._persist_frame(frame, path, log)
 
     def _close_backend(self, log: Callable[[str, str], None]) -> None:
         self._imgs = []
