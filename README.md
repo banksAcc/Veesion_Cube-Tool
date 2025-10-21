@@ -99,13 +99,7 @@ This mode replays sessions by reading the sample images through the same process
   ```
 - **Single-image estimation CLI**:
   ```bash
-  python -m cube_minimal.cli.estimate_one \
-      --image cube_minimal/data/sample_dataset/example_1.png \
-      --camera cube_minimal/config/calib_data.npz \
-      --aruco_dict 4X4_50 \
-      --marker_size 0.055 \
-      --cube_size 0.060 \
-      --out overlay.png
+  python -m cube_minimal.cli.estimate_one --image cube_minimal/data/sample_dataset/example_1.png --camera cube_minimal/config/calib_data.npz --aruco_dict 4X4_50 --marker_size 0.055 --cube_size 0.060 --out overlay.png
   ```
 - **Simulated PC session**: enable `capture.simulate_camera: true` as above and launch the application from `pc/app/`:
   ```bash
