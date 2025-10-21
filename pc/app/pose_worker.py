@@ -188,10 +188,7 @@ class PoseWorker:
             while True:
                 packet = await job.frame_queue.get()
                 if packet is None:
-                    if job.finished.is_set():
-                        break
-                    await asyncio.sleep(max(0.001, job.freq_ms / 1000.0))
-                    continue
+                    break
 
                 frame_result, overlay = await asyncio.to_thread(
                     self._process_frame_packet, packet
@@ -202,6 +199,9 @@ class PoseWorker:
                     await self._save_packet(job, packet, overlay, loop)
 
                 packet.frame = None  # release reference as soon as possible
+
+            if not job.finished.is_set():
+                await job.finished.wait()
 
             if job.end_iso is None:
                 job.results["end"] = job.results.get("end") or job.start_iso
