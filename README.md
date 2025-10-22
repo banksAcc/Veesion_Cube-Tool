@@ -123,6 +123,12 @@ This mode replays sessions by reading the sample images through the same process
   ```bash
   python app.py
   ```
+- **Static quality checks** (run from the repository root after activating the virtualenv):
+  ```bash
+  ruff check pc/app
+  mypy
+  ```
+  Both tools read their configuration from `pyproject.toml` and warn about style or typing regressions.
 
 ## Further reading
 - [Prerequisites](#prerequisites) and [Repository structure](#repository-structure) for a quick overview

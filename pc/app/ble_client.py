@@ -6,10 +6,19 @@ commands between the hardware and the session manager. It also allows sending
 arbitrary messages to the device through a queue.
 """
 
+from __future__ import annotations
+
 import asyncio
+from typing import Optional, TYPE_CHECKING
+
 from bleak import BleakClient, BleakScanner
 
+from config_models import AppConfig
 from logger import get_logger
+from messages import BleMessage
+
+if TYPE_CHECKING:  # pragma: no cover - typing helper
+    from session_manager import SessionManager
 
 START_CMD = "START"
 END_CMD = "END"  # user confirmed END
@@ -17,14 +26,14 @@ END_CMD = "END"  # user confirmed END
 log = get_logger("BLE")
 
 
-async def _discover_address(cfg: dict) -> str | None:
+async def _discover_address(cfg: AppConfig) -> str | None:
     """Find the BLE device address from the configuration or by scanning."""
 
-    addr = cfg["ble"].get("addr")
+    addr = cfg.ble.addr
     if addr:
         return addr
-    name_prefix = cfg["ble"].get("name_prefix", "ESP32-RGB-BLE")
-    timeout = float(cfg["ble"].get("scan_timeout", 6.0))
+    name_prefix = cfg.ble.name_prefix
+    timeout = float(cfg.ble.scan_timeout)
     log.info(f"Scanning {timeout:.1f}s for '{name_prefix}*' ...")
     devices = await BleakScanner.discover(timeout=timeout)
     for d in devices:
@@ -35,7 +44,11 @@ async def _discover_address(cfg: dict) -> str | None:
     return None
 
 
-async def run_ble_client(cfg: dict, session_mgr, out_queue: asyncio.Queue[str]):
+async def run_ble_client(
+    cfg: AppConfig,
+    session_mgr: "SessionManager",
+    out_queue: asyncio.Queue[Optional[BleMessage]],
+) -> None:
     """Connect to the ESP32 and bridge BLE messages to the session manager."""
 
     address = await _discover_address(cfg)
@@ -48,7 +61,7 @@ async def run_ble_client(cfg: dict, session_mgr, out_queue: asyncio.Queue[str]):
     # UUID NUS RX (messages from PC to device)
     NUS_RX_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 
-    async def on_notify(_handle, data: bytearray):
+    async def on_notify(_handle: int, data: bytearray) -> None:
         """Handle notifications from the BLE device."""
 
         msg = data.decode(errors="ignore").strip().upper()
@@ -73,7 +86,7 @@ async def run_ble_client(cfg: dict, session_mgr, out_queue: asyncio.Queue[str]):
                     await client.start_notify(NUS_TX_UUID, on_notify)
                     log.info("Subscribed to notifications. (CTRL+C to exit)")
 
-                    async def send_queued():
+                    async def send_queued() -> None:
                         """Send messages from the queue to the BLE device."""
 
                         while True:
@@ -81,7 +94,10 @@ async def run_ble_client(cfg: dict, session_mgr, out_queue: asyncio.Queue[str]):
                             if msg is None:
                                 break
                             try:
-                                await client.write_gatt_char(NUS_RX_UUID, msg.encode())
+                                await client.write_gatt_char(
+                                    NUS_RX_UUID,
+                                    msg.as_bytes(),
+                                )
                             except Exception as e:
                                 log.error(f"send error: {e}")
 

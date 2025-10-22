@@ -1,6 +1,12 @@
+"""Logging helpers used across the application."""
+
+from __future__ import annotations
+
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any, Mapping, MutableMapping, Optional, Union
+
+from config_models import AppConfig, RuntimeConfig
 
 
 class _PrefixAdapter(logging.LoggerAdapter):
@@ -8,17 +14,34 @@ class _PrefixAdapter(logging.LoggerAdapter):
         super().__init__(logger, {})
         self.prefix = prefix
 
-    def process(self, msg, kwargs):
+    def process(
+        self, msg: str, kwargs: MutableMapping[str, Any]
+    ) -> tuple[str, MutableMapping[str, Any]]:
         return f"[{self.prefix}] {msg}", kwargs
 
 
-def setup_logging(cfg: dict, log_file: Optional[Path] = None) -> None:
+def _ensure_runtime_config(
+    cfg: Union[AppConfig, RuntimeConfig, Mapping[str, Any]]
+) -> RuntimeConfig:
+    if isinstance(cfg, AppConfig):
+        return cfg.runtime
+    if isinstance(cfg, RuntimeConfig):
+        return cfg
+    runtime = cfg.get("runtime", {}) if isinstance(cfg, Mapping) else {}
+    return RuntimeConfig.from_mapping(runtime)
+
+
+def setup_logging(
+    cfg: Union[AppConfig, RuntimeConfig, Mapping[str, Any]],
+    log_file: Optional[Path] = None,
+) -> None:
     """Configure root logging according to config.yaml."""
-    runtime = cfg.get("runtime", {})
-    level_name = str(runtime.get("log_level", "INFO")).upper()
+
+    runtime = _ensure_runtime_config(cfg)
+    level_name = str(runtime.log_level).upper()
     level = getattr(logging, level_name, logging.INFO)
     handlers: list[logging.Handler] = [logging.StreamHandler()]
-    if runtime.get("log_to_file", False):
+    if runtime.log_to_file:
         file_path = log_file or Path("app.log")
         handlers.append(logging.FileHandler(file_path, encoding="utf-8"))
 

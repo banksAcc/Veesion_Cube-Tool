@@ -1,25 +1,41 @@
 """Asynchronous worker that computes pose from captured frames."""
 
+from __future__ import annotations
+
 import asyncio
 import csv
 import json
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
 from cube_minimal.cube_pose.api import estimate_cube_from_image
 from cube_minimal.cube_pose.filtering.marker_filter import MarkerFilter
 
+from config_models import AppConfig, CubePoseConfig
 from logger import get_logger
+from messages import (
+    BLE_COMPUTATION_END,
+    BLE_COMPUTATION_START,
+    BleMessage,
+    PoseEndMessage,
+    PoseStartMessage,
+    PoseWorkerPayload,
+)
 from stream import FramePacket
 
 try:
-    import cv2
-    import numpy as np
+    import cv2  # type: ignore[import]
+    import numpy as np  # type: ignore[import]
     HAS_CV = True
-except Exception:
-    cv2, np, HAS_CV = None, None, False
+except Exception:  # pragma: no cover - optional dependency
+    cv2 = None  # type: ignore[assignment]
+    np = None  # type: ignore[assignment]
+    HAS_CV = False
+
+if TYPE_CHECKING:  # pragma: no cover - typing helper
+    import numpy as np
 
 log = get_logger("POSE")
 
@@ -28,10 +44,10 @@ class SessionJob:
     """Track state for an in-flight pose estimation session."""
 
     key: str
-    frame_queue: asyncio.Queue
+    frame_queue: asyncio.Queue[Optional[FramePacket]]
     freq_ms: int
     start_iso: str
-    results: dict
+    results: dict[str, Any]
     label: str
     save_frames: bool
     save_dir: Optional[Path] = None
@@ -44,13 +60,18 @@ class SessionJob:
 class PoseWorker:
     """Asynchronous worker that estimates cube pose for capture sessions."""
 
-    def __init__(self, cfg: dict, output_root: Path, ble_queue: asyncio.Queue[str]):
+    def __init__(
+        self,
+        cfg: AppConfig,
+        output_root: Path,
+        ble_queue: asyncio.Queue[Optional[BleMessage]],
+    ):
         self.cfg = cfg
         self.output_root = output_root
-        self.queue: asyncio.Queue = asyncio.Queue()
+        self.queue: asyncio.Queue[Optional[PoseWorkerPayload]] = asyncio.Queue()
         self.tasks: list[asyncio.Task] = []
-        self.max_jobs = int(cfg["pose"].get("max_parallel_jobs", 1))
-        self.enabled = bool(cfg["pose"].get("enabled", True))
+        self.max_jobs = int(cfg.pose.max_parallel_jobs)
+        self.enabled = bool(cfg.pose.enabled)
         self.ble_queue = ble_queue
         try:
             self.loop = asyncio.get_running_loop()
@@ -58,12 +79,10 @@ class PoseWorker:
             self.loop = asyncio.get_event_loop()
 
         self.sessions: Dict[str, SessionJob] = {}
-        self.method = cfg["pose"].get("method", "cube").lower()
-        self.pose_cfg = cfg["pose"].get("cube", {})
-        self.wand_offset = float(self.pose_cfg.get("wand_offset_m", 0.0))
-        self.wand_directions = self._build_wand_direction_map(
-            self.pose_cfg.get("wand_directions", {})
-        )
+        self.method = cfg.pose.method.lower()
+        self.pose_cfg: CubePoseConfig = cfg.pose.cube
+        self.wand_offset = float(self.pose_cfg.wand_offset_m)
+        self.wand_directions = dict(self.pose_cfg.wand_directions)
         self.save_executor = ThreadPoolExecutor(max_workers=1)
 
     @staticmethod
@@ -88,7 +107,7 @@ class PoseWorker:
 
         return np.array([rz, ry, rx], dtype=float)
 
-    async def start(self):
+    async def start(self) -> None:
         """Spawn worker tasks if pose estimation is enabled."""
         if not self.enabled:
             log.info("disabled")
@@ -97,7 +116,7 @@ class PoseWorker:
         for _ in range(self.max_jobs):
             self.tasks.append(asyncio.create_task(self._worker()))
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Signal workers to exit and wait for completion."""
         for job in list(self.sessions.values()):
             job.finished.set()
@@ -116,35 +135,34 @@ class PoseWorker:
         self.sessions.clear()
         self.save_executor.shutdown(wait=True)
 
-    async def _worker(self):
+    async def _worker(self) -> None:
         """Consume jobs from the queue and dispatch session handling."""
         while True:
             job = await self.queue.get()
             if job is None:
                 break
-            action = job.get("action")
-            if action == "start":
+            if isinstance(job, PoseStartMessage):
                 self._handle_start(job)
-            elif action == "end":
+            elif isinstance(job, PoseEndMessage):
                 self._handle_end(job)
             else:
-                log.warning(f"Unknown pose job action: {action}")
+                log.warning(f"Unknown pose job payload: {job!r}")
 
-    def _handle_start(self, payload: dict) -> None:
-        session_key = payload["session_key"]
+    def _handle_start(self, payload: PoseStartMessage) -> None:
+        session_key = payload.session_key
         if session_key in self.sessions:
             log.warning(f"Session {session_key} already tracked -> ignoring start")
             return
 
-        session_dir = Path(payload["session_dir"])
-        frame_queue: asyncio.Queue = payload["frame_queue"]
-        freq_ms = int(payload["freq_ms"])
-        label = payload.get("label") or session_dir.name
-        save_frames = bool(payload.get("save_frames", False))
-        save_dir = Path(payload["save_dir"]) if payload.get("save_dir") else None
-        results = {
+        session_dir = payload.session_dir
+        frame_queue = payload.frame_queue
+        freq_ms = int(payload.freq_ms)
+        label = payload.label or session_dir.name
+        save_frames = bool(payload.save_frames)
+        save_dir = payload.save_dir
+        results: dict[str, Any] = {
             "session": label,
-            "start": payload["start"],
+            "start": payload.start,
             "end": None,
             "frequency_ms": freq_ms,
             "method": self.method,
@@ -154,7 +172,7 @@ class PoseWorker:
             key=session_key,
             frame_queue=frame_queue,
             freq_ms=freq_ms,
-            start_iso=payload["start"],
+            start_iso=payload.start,
             results=results,
             label=label,
             save_frames=save_frames,
@@ -165,27 +183,27 @@ class PoseWorker:
         self.sessions[session_key] = job
         log.info(f"Pose session started for {label}")
 
-    def _handle_end(self, payload: dict) -> None:
-        session_key = payload["session_key"]
+    def _handle_end(self, payload: PoseEndMessage) -> None:
+        session_key = payload.session_key
         job = self.sessions.get(session_key)
         if job is None:
             log.warning(f"Pose END for unknown session {session_key}")
             return
-        if payload.get("save_dir"):
-            job.save_dir = Path(payload["save_dir"])
-        job.end_iso = payload.get("end")
+        if payload.save_dir:
+            job.save_dir = payload.save_dir
+        job.end_iso = payload.end
         job.results["end"] = job.end_iso
         job.finished.set()
         log.info(f"Pose session finishing for {job.label}")
 
-    async def _run_session(self, job: SessionJob):
+    async def _run_session(self, job: SessionJob) -> None:
         try:
             await self._consume_session(job)
         finally:
             self.sessions.pop(job.key, None)
 
     async def _consume_session(self, job: SessionJob) -> None:
-        self._notify_ble("COMPUTATION START")
+        self._notify_ble(BLE_COMPUTATION_START)
         loop = asyncio.get_running_loop()
         try:
             while True:
@@ -210,13 +228,13 @@ class PoseWorker:
                 job.results["end"] = job.results.get("end") or job.start_iso
         finally:
             self._write_results(job)
-            self._notify_ble("COMPUTATION END")
+            self._notify_ble(BLE_COMPUTATION_END)
 
     async def _save_packet(
         self,
         job: SessionJob,
         packet: FramePacket,
-        overlay,
+        overlay: Any,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         if not HAS_CV:
@@ -231,7 +249,7 @@ class PoseWorker:
                 return
             path = Path(job.save_dir) / packet.filename
 
-        def _write():
+        def _write() -> None:
             path.parent.mkdir(parents=True, exist_ok=True)
             try:
                 ok = cv2.imwrite(str(path), image)
@@ -248,7 +266,7 @@ class PoseWorker:
 
     def _process_frame_packet(
         self, job: SessionJob, packet: FramePacket
-    ) -> Tuple[dict, Optional["np.ndarray"]]:
+    ) -> Tuple[dict[str, Any], Optional["np.ndarray"]]:
         if self.method == "cube" and HAS_CV and hasattr(cv2, "aruco"):
             return self._process_cube_frame(job, packet)
         if self.method == "custom":
@@ -270,24 +288,26 @@ class PoseWorker:
         )
 
     def _create_marker_filter(self) -> MarkerFilter:
-        cfg = self.pose_cfg.get("marker_filter", {})
-        active = bool(cfg.get("active_marker_filter", False))
-        try_adjust = bool(cfg.get("try_adj_marker", False))
-        threshold = float(cfg.get("area_threshold_px", 0.0) or 0.0)
+        cfg = self.pose_cfg.marker_filter
+        active = bool(cfg.active_marker_filter)
+        try_adjust = bool(cfg.try_adj_marker)
+        threshold = float(cfg.area_threshold_px or 0.0)
         return MarkerFilter(
             active=active,
             try_adjust=try_adjust,
             area_threshold_px=threshold,
         )
 
-    def _process_cube_frame(self, job: SessionJob, packet: FramePacket) -> Tuple[dict, Optional["np.ndarray"]]:
+    def _process_cube_frame(
+        self, job: SessionJob, packet: FramePacket
+    ) -> Tuple[dict[str, Any], Optional["np.ndarray"]]:
         pose_cfg = self.pose_cfg
-        dict_name = pose_cfg.get("dictionary", "4X4_50")
-        marker_size = float(pose_cfg.get("marker_size_mm", 55.0)) / 1000.0
-        cube_size = float(pose_cfg.get("cube_size_mm", 60.0)) / 1000.0
-        pair_strategy = pose_cfg.get("pair_strategy", "first")
+        dict_name = pose_cfg.dictionary
+        marker_size = float(pose_cfg.marker_size_mm) / 1000.0
+        cube_size = float(pose_cfg.cube_size_mm) / 1000.0
+        pair_strategy = pose_cfg.pair_strategy
 
-        calib_path = self.cfg["pose"].get("camera_calibration_npz")
+        calib_path = self.cfg.pose.camera_calibration_npz
         if not calib_path:
             return (
                 {
@@ -301,7 +321,7 @@ class PoseWorker:
         try:
             result = estimate_cube_from_image(
                 packet.frame,
-                calib_path,
+                str(calib_path),
                 dict_name,
                 marker_size,
                 cube_size,
@@ -331,7 +351,7 @@ class PoseWorker:
 
         overlay = result.get("overlay")
 
-        frame_entry = {
+        frame_entry: dict[str, Any] = {
             "file": packet.filename,
             "ok": True,
             "rvec": [float(x) for x in np.asarray(result["rvec"]).flatten()],
@@ -369,20 +389,7 @@ class PoseWorker:
         return frame_entry, overlay
 
 
-    def _build_wand_direction_map(self, raw_cfg):
-        mapping = {}
-        if not isinstance(raw_cfg, dict):
-            return mapping
-        for key, spec in raw_cfg.items():
-            try:
-                marker_id = int(key)
-            except (TypeError, ValueError):
-                log.warning(f"Invalid marker id in wand_directions: {key!r}")
-                continue
-            mapping[marker_id] = spec
-        return mapping
-
-    def _direction_from_spec(self, spec):
+    def _direction_from_spec(self, spec: Any) -> Optional["np.ndarray"]:
         if np is None:
             return None
         if isinstance(spec, (list, tuple)):
@@ -415,7 +422,7 @@ class PoseWorker:
         log.warning(f"Unsupported wand direction spec: {spec!r}")
         return None
 
-    def _compute_wand_tip(self, result: dict):
+    def _compute_wand_tip(self, result: dict) -> Optional[Tuple["np.ndarray", "np.ndarray"]]:
         if np is None or self.wand_offset == 0:
             return None
         markers = result.get("markers") or []
@@ -446,7 +453,9 @@ class PoseWorker:
         tip = tvec + wand_dir * float(self.wand_offset)
         return tip, wand_dir
 
-    def _compute_tip_rotation(self, result: dict, wand_dir: "np.ndarray") -> Optional["np.ndarray"]:
+    def _compute_tip_rotation(
+        self, result: dict, wand_dir: "np.ndarray"
+    ) -> Optional["np.ndarray"]:
         if np is None:
             return None
         base_R = np.asarray(result.get("R"), dtype=float)
@@ -531,7 +540,7 @@ class PoseWorker:
         except Exception as exc:
             log.error(f"Failed to write pose CSV: {exc}")
 
-    def _notify_ble(self, message: str) -> None:
+    def _notify_ble(self, message: BleMessage) -> None:
         try:
             asyncio.run_coroutine_threadsafe(self.ble_queue.put(message), self.loop)
         except RuntimeError:

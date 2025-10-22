@@ -2,7 +2,7 @@
 
 This module exposes :class:`SessionManager`, which reacts to BLE commands and
 starts or stops capture sessions. Each :class:`Session` chooses a concrete
-capture backend according to ``cfg['capture']['simulate_camera']``:
+capture backend according to ``cfg.capture.simulate_camera``:
 
 * ``True`` -> :class:`TestCapture` replays static images from
   ``test_source_dir`` for deterministic runs.
@@ -13,16 +13,20 @@ The flag is typically set in ``pc/app/config.yaml`` and allows developers to
 switch between real hardware and test data without code changes.
 """
 
+from __future__ import annotations
+
 import asyncio
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from concurrent.futures import TimeoutError
 
 from capture import BaseCapture, OpenCvCapture, PylonCapture, TestCapture
+from config_models import AppConfig
 from logger import get_logger
+from messages import PoseEndMessage, PoseStartMessage, PoseWorkerPayload
 from stream import FramePacket
 
 FMT = "%Y-%m-%d_%H-%M-%S"  # readable and sortable
@@ -43,7 +47,7 @@ class Session:
         capturer: BaseCapture,
         auto_close: bool,
         loop: asyncio.AbstractEventLoop,
-        frame_queue: asyncio.Queue,
+        frame_queue: asyncio.Queue[Optional[FramePacket]],
         save_frames: bool,
     ):
         """Create a new session and prepare the capture directory.
@@ -83,7 +87,7 @@ class Session:
             f"start @ {self.start_dt.isoformat()} freq={self.freq_ms}ms use_camera={self.use_camera}"
         )
 
-    def _log(self, msg: str, level: str = "info"):
+    def _log(self, msg: str, level: str = "info") -> None:
         getattr(session_logger, level)(msg)
         try:
             with self.session_log.open("a", encoding="utf-8") as f:
@@ -91,7 +95,7 @@ class Session:
         except Exception:
             pass
 
-    def log_capture(self, msg: str, level: str = "info"):
+    def log_capture(self, msg: str, level: str = "info") -> None:
         getattr(capture_logger, level)(msg)
         try:
             with self.session_log.open("a", encoding="utf-8") as f:
@@ -99,7 +103,7 @@ class Session:
         except Exception:
             pass
 
-    def start(self):
+    def start(self) -> None:
         """Spawn the capture thread."""
         self.capturer.set_auto_close(self.auto_close)
         self.thread = threading.Thread(
@@ -116,7 +120,7 @@ class Session:
         )
         self.thread.start()
 
-    def stop(self):
+    def stop(self) -> tuple[Path, datetime, Optional[datetime]]:
         """Stop capture and signal the end of the frame stream."""
         self.end_dt = datetime.now()
         self._log(f"stop @ {self.end_dt.isoformat()}")
@@ -126,7 +130,7 @@ class Session:
         self._signal_stream_closed()
         return self.dir, self.start_dt, self.end_dt
 
-    def _handle_frame(self, frame, filename: str, captured_at: float, index: int) -> None:
+    def _handle_frame(self, frame: Any, filename: str, captured_at: float, index: int) -> None:
         packet = FramePacket(
             session_key=self.start_dt.isoformat(),
             index=index,
@@ -158,33 +162,39 @@ class Session:
 class SessionManager:
     """Manage capture sessions and queue them for pose estimation."""
 
-    def __init__(self, cfg: dict, output_root: Path, pose_queue: asyncio.Queue):
+    def __init__(
+        self,
+        cfg: AppConfig,
+        output_root: Path,
+        pose_queue: asyncio.Queue[Optional[PoseWorkerPayload]],
+    ):
         """Initialize the manager with configuration and queues."""
 
         self.cfg = cfg
+        self.raw_cfg = cfg.as_dict()
         self.output_root = output_root
         self.pose_queue = pose_queue
 
         self.current: Optional[Session] = None
         self.lock = asyncio.Lock()
 
-        self.debug = bool(cfg["runtime"].get("debug", False))
+        self.debug = bool(cfg.runtime.debug)
 
-        self.simulate = bool(cfg["capture"].get("simulate_camera", False))
+        self.simulate = bool(cfg.capture.simulate_camera)
         self.use_camera = not self.simulate
-        self.keep_camera_warm = bool(cfg["capture"].get("keep_camera_warm", True))
-        self.save_frames = bool(cfg["capture"].get("save_frames", False))
-        self.frame_queue_size = int(cfg["capture"].get("frame_queue_size", 4))
+        self.keep_camera_warm = bool(cfg.capture.keep_camera_warm)
+        self.save_frames = bool(cfg.capture.save_frames)
+        self.frame_queue_size = int(cfg.capture.frame_queue_size)
         self.capturer: Optional[BaseCapture] = None
 
     def _capture_log(self, msg: str, level: str = "info") -> None:
         getattr(capture_logger, level)(msg)
 
     def _create_camera_capturer(self) -> BaseCapture:
-        cam_type = str(self.cfg["capture"].get("camera_type", "opencv")).lower()
+        cam_type = str(self.cfg.capture.camera_type).lower()
         if cam_type == "pylon":
-            return PylonCapture(self.cfg)
-        return OpenCvCapture(self.cfg)
+            return PylonCapture(self.raw_cfg)
+        return OpenCvCapture(self.raw_cfg)
 
     def _ensure_camera_capturer(self) -> BaseCapture:
         if self.capturer is None:
@@ -201,7 +211,7 @@ class SessionManager:
         finally:
             self.capturer = None
 
-    async def handle_start_command(self):
+    async def handle_start_command(self) -> None:
         """Handle START messages from BLE by creating a new session."""
         async with self.lock:
             if self.current is not None:
@@ -210,17 +220,19 @@ class SessionManager:
                 )
                 return
 
-            freq_ms = int(self.cfg["capture"].get("frequency_ms", 200))
+            freq_ms = int(self.cfg.capture.frequency_ms)
 
             if self.use_camera:
                 capturer = self._ensure_camera_capturer()
                 auto_close = not (self.keep_camera_warm and self.use_camera)
             else:
-                capturer = TestCapture(self.cfg)
+                capturer = TestCapture(self.raw_cfg)
                 auto_close = True
 
             loop = asyncio.get_running_loop()
-            frame_queue: asyncio.Queue = asyncio.Queue(maxsize=self.frame_queue_size)
+            frame_queue: asyncio.Queue[Optional[FramePacket]] = asyncio.Queue(
+                maxsize=self.frame_queue_size
+            )
             session = Session(
                 self.output_root,
                 freq_ms,
@@ -235,21 +247,20 @@ class SessionManager:
             session.start()
             state_logger.info("Capture session STARTED")
 
-            if bool(self.cfg["pose"].get("enabled", True)):
-                pose_job = {
-                    "action": "start",
-                    "session_key": session.start_dt.isoformat(),
-                    "session_dir": str(session.dir),
-                    "frame_queue": frame_queue,
-                    "start": session.start_dt.isoformat(),
-                    "freq_ms": session.freq_ms,
-                    "label": session.dir.name,
-                    "save_frames": session.save_frames,
-                    "save_dir": str(session.dir) if session.save_frames else None,
-                }
+            if self.cfg.pose.enabled:
+                pose_job = PoseStartMessage(
+                    session_key=session.start_dt.isoformat(),
+                    session_dir=session.dir,
+                    frame_queue=frame_queue,
+                    start=session.start_dt.isoformat(),
+                    freq_ms=session.freq_ms,
+                    label=session.dir.name,
+                    save_frames=session.save_frames,
+                    save_dir=session.dir if session.save_frames else None,
+                )
                 await self.pose_queue.put(pose_job)
 
-    async def handle_end_command(self):
+    async def handle_end_command(self) -> None:
         """Handle END messages by closing the current session."""
         async with self.lock:
             if self.current is None:
@@ -261,7 +272,7 @@ class SessionManager:
             self.current = None
             state_logger.info("Capture session STOPPED and queued for pose")
 
-    async def stop_session(self, reason: str = ""):
+    async def stop_session(self, reason: str = "") -> None:
         """Force stop of the active session, providing a reason."""
         async with self.lock:
             if self.current is None:
@@ -270,7 +281,7 @@ class SessionManager:
             await self._stop_and_queue(self.current)
             self.current = None
 
-    async def on_ble_connected(self):
+    async def on_ble_connected(self) -> None:
         """Warm up the camera as soon as the BLE device connects."""
         if not (self.use_camera and self.keep_camera_warm):
             return
@@ -282,7 +293,7 @@ class SessionManager:
             except Exception as exc:  # pragma: no cover - hardware dependent
                 capture_logger.error(f"Capture warm-up failed: {exc}")
 
-    async def on_ble_disconnected(self):
+    async def on_ble_disconnected(self) -> None:
         """Stop session and release the camera after BLE disconnects."""
         async with self.lock:
             if self.current is not None:
@@ -291,7 +302,7 @@ class SessionManager:
                 state_logger.info("Capture session STOPPED due to BLE disconnect")
             self._release_capturer()
 
-    async def _stop_and_queue(self, session: Session):
+    async def _stop_and_queue(self, session: Session) -> None:
         """Stop the session and enqueue it for pose estimation."""
         try:
             final_dir, start_dt, end_dt = session.stop()
@@ -299,20 +310,19 @@ class SessionManager:
             session_logger.error(f"stop error: {e}")
             return
 
-        if bool(self.cfg["pose"].get("enabled", True)):
-            pose_job = {
-                "action": "end",
-                "session_key": start_dt.isoformat(),
-                "session_dir": str(final_dir),
-                "start": start_dt.isoformat(),
-                "end": end_dt.isoformat(),
-                "freq_ms": session.freq_ms,
-                "label": final_dir.name,
-                "save_dir": str(final_dir) if session.save_frames else None,
-            }
+        if self.cfg.pose.enabled:
+            pose_job = PoseEndMessage(
+                session_key=start_dt.isoformat(),
+                session_dir=final_dir,
+                start=start_dt.isoformat(),
+                end=end_dt.isoformat() if end_dt else start_dt.isoformat(),
+                freq_ms=session.freq_ms,
+                label=final_dir.name,
+                save_dir=final_dir if session.save_frames else None,
+            )
             await self.pose_queue.put(pose_job)
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
         """Stop current session when shutting down."""
         await self.stop_session(reason="shutdown")
         async with self.lock:
