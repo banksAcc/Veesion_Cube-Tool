@@ -81,7 +81,6 @@ class PoseWorker:
         self.marker_filter_area_threshold = (
             float(area_threshold) if area_threshold is not None else None
         )
-        self._thread_ctx = threading.local()
 
     @staticmethod
     def _rotation_matrix_to_euler_zyx(R: "np.ndarray") -> Optional["np.ndarray"]:
@@ -223,13 +222,11 @@ class PoseWorker:
                     if time.time() - mtime < self.file_settle:
                         continue
 
-                    self._thread_ctx.marker_filter = job.marker_filter
-                    self._thread_ctx.frame_timestamp = mtime
-                    try:
-                        frame_result, overlay = self._process_frame(frame_path)
-                    finally:
-                        self._thread_ctx.marker_filter = None
-                        self._thread_ctx.frame_timestamp = None
+                    frame_result, overlay = self._process_frame(
+                        frame_path,
+                        marker_filter=job.marker_filter,
+                        frame_timestamp=mtime,
+                    )
                     job.results["frames"].append(frame_result)
                     job.processed.add(frame_path.name)
 
@@ -255,9 +252,18 @@ class PoseWorker:
             self._cleanup_frames(final_dir)
             self._notify_ble("COMPUTATION END")
 
-    def _process_frame(self, frame_path: Path) -> Tuple[dict, Optional["np.ndarray"]]:
+    def _process_frame(
+        self,
+        frame_path: Path,
+        marker_filter: Optional[MarkerFilter] = None,
+        frame_timestamp: Optional[float] = None,
+    ) -> Tuple[dict, Optional["np.ndarray"]]:
         if self.method == "cube" and HAS_CV and hasattr(cv2, "aruco"):
-            return self._process_cube_frame(frame_path)
+            return self._process_cube_frame(
+                frame_path,
+                marker_filter=marker_filter,
+                frame_timestamp=frame_timestamp,
+            )
         if self.method == "custom":
             return (
                 {
@@ -276,7 +282,12 @@ class PoseWorker:
             None,
         )
 
-    def _process_cube_frame(self, frame_path: Path) -> Tuple[dict, Optional["np.ndarray"]]:
+    def _process_cube_frame(
+        self,
+        frame_path: Path,
+        marker_filter: Optional[MarkerFilter] = None,
+        frame_timestamp: Optional[float] = None,
+    ) -> Tuple[dict, Optional["np.ndarray"]]:
         pose_cfg = self.pose_cfg
         dict_name = pose_cfg.get("dictionary", "4X4_50")
         marker_size = float(pose_cfg.get("marker_size_mm", 55.0)) / 1000.0
@@ -295,8 +306,6 @@ class PoseWorker:
             )
 
         try:
-            marker_filter = getattr(self._thread_ctx, "marker_filter", None)
-            frame_timestamp = getattr(self._thread_ctx, "frame_timestamp", None)
             result = estimate_cube_from_image(
                 str(frame_path),
                 calib_path,
