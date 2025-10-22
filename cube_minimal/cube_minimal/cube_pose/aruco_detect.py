@@ -15,12 +15,26 @@ DICT_MAP = {
     "APRILTAG_36h11": cv.aruco.DICT_APRILTAG_36h11,
 }
 
+def _contour_area(points: np.ndarray) -> float:
+    pts = points.reshape(-1, 2)
+    if pts.shape[0] < 3:
+        return 0.0
+    x = pts[:, 0]
+    y = pts[:, 1]
+    return float(0.5 * abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1))))
+
+
 @dataclass
 class MarkerDetection:
     """Basic detection result for a marker."""
 
     id: int
     corners: np.ndarray  # (4,2) float32, order: tl, tr, br, bl
+    area_px: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.area_px is None:
+            self.area_px = _contour_area(self.corners.astype(np.float32))
 
 
 def make_detector(dict_name: str) -> cv.aruco.ArucoDetector:
@@ -58,5 +72,7 @@ def detect_markers(img_bgr: np.ndarray, dict_name: str) -> List[MarkerDetection]
     if ids is None:
         return out
     for i, mid in enumerate(ids.flatten()):
-        out.append(MarkerDetection(int(mid), corners[i].reshape(4,2).astype(np.float32)))
+        pts = corners[i].reshape(4, 2).astype(np.float32)
+        area = _contour_area(pts)
+        out.append(MarkerDetection(int(mid), pts, area))
     return out
