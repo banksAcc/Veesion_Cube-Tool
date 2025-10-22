@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence
 
+import cv2 as cv
 import numpy as np
 
 from ..aruco_detect import MarkerDetection
@@ -117,4 +118,7 @@ class MarkerFilter:
         new_tvec = new_tvec.reshape(-1)
         new_tvec[2] = -new_tvec[2]
         flipped_tvec = new_tvec.reshape(pose.tvec.shape)
-        return MarkerPose(pose.id, pose.rvec, flipped_tvec, pose.R)
+        flip_matrix = np.diag([1.0, -1.0, -1.0])
+        flipped_R = pose.R @ flip_matrix
+        flipped_rvec, _ = cv.Rodrigues(flipped_R)
+        return MarkerPose(pose.id, flipped_rvec, flipped_tvec, flipped_R)
