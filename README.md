@@ -131,6 +131,13 @@ This mode replays sessions by reading the sample images through the same process
 - [`cube_minimal/README.md`](cube_minimal/README.md) – pose estimation API and CLI
 - [`cube_minimal/data/README.md`](cube_minimal/data/README.md) – structure of the sample dataset
 
+## Next steps
+- Specchiare Marker Errato sul pennino; Review Pennino
+- Calibrazione Estrinseca Dexter
+- Sviluppo di un programma robot per lettura csv e spostamento braccio nella posizione desiderata
+
+
+report di chiusura del lavoro
 ## License
 All rights reserved.
 
