@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 from cube_minimal.cube_pose.api import estimate_cube_from_image
+from cube_minimal.cube_pose.filtering.marker_filter import MarkerFilter
 
 from logger import get_logger
 from stream import FramePacket
@@ -37,6 +38,7 @@ class SessionJob:
     end_iso: Optional[str] = None
     finished: asyncio.Event = field(default_factory=asyncio.Event)
     task: Optional[asyncio.Task] = None
+    marker_filter: Optional[MarkerFilter] = None
 
 
 class PoseWorker:
@@ -157,6 +159,7 @@ class PoseWorker:
             label=label,
             save_frames=save_frames,
             save_dir=save_dir,
+            marker_filter=self._create_marker_filter(),
         )
         job.task = asyncio.create_task(self._run_session(job))
         self.sessions[session_key] = job
@@ -191,7 +194,7 @@ class PoseWorker:
                     break
 
                 frame_result, overlay = await asyncio.to_thread(
-                    self._process_frame_packet, packet
+                    self._process_frame_packet, job, packet
                 )
                 job.results["frames"].append(frame_result)
 
@@ -244,10 +247,10 @@ class PoseWorker:
             log.warning(f"Failed to persist frame {path.name}: {exc}")
 
     def _process_frame_packet(
-        self, packet: FramePacket
+        self, job: SessionJob, packet: FramePacket
     ) -> Tuple[dict, Optional["np.ndarray"]]:
         if self.method == "cube" and HAS_CV and hasattr(cv2, "aruco"):
-            return self._process_cube_frame(packet)
+            return self._process_cube_frame(job, packet)
         if self.method == "custom":
             return (
                 {
@@ -266,7 +269,18 @@ class PoseWorker:
             None,
         )
 
-    def _process_cube_frame(self, packet: FramePacket) -> Tuple[dict, Optional["np.ndarray"]]:
+    def _create_marker_filter(self) -> MarkerFilter:
+        cfg = self.pose_cfg.get("marker_filter", {})
+        active = bool(cfg.get("active_marker_filter", False))
+        try_adjust = bool(cfg.get("try_adj_marker", False))
+        threshold = float(cfg.get("area_threshold_px", 0.0) or 0.0)
+        return MarkerFilter(
+            active=active,
+            try_adjust=try_adjust,
+            area_threshold_px=threshold,
+        )
+
+    def _process_cube_frame(self, job: SessionJob, packet: FramePacket) -> Tuple[dict, Optional["np.ndarray"]]:
         pose_cfg = self.pose_cfg
         dict_name = pose_cfg.get("dictionary", "4X4_50")
         marker_size = float(pose_cfg.get("marker_size_mm", 55.0)) / 1000.0
@@ -293,6 +307,8 @@ class PoseWorker:
                 cube_size,
                 pair_strategy=pair_strategy,
                 return_overlay=True,
+                marker_filter=job.marker_filter,
+                timestamp=packet.timestamp,
             )
         except ValueError:
             return (
@@ -323,6 +339,10 @@ class PoseWorker:
             "reproj_err": None,
             "num_markers": int(result.get("num_markers", 0)),
         }
+
+        filter_info = result.get("marker_filter") or {}
+        if filter_info.get("discarded_ids") or filter_info.get("corrected_ids"):
+            frame_entry["marker_filter"] = filter_info
 
         frame_entry["timestamp"] = packet.iso_timestamp
 
