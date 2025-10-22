@@ -1,6 +1,6 @@
 ﻿"""High level API to estimate the pose of a cube from a single image."""
 
-from typing import Dict, Any, Union
+from typing import Dict, Any, Optional, Union
 import numpy as np
 import cv2 as cv
 
@@ -8,6 +8,7 @@ from .camera_io import load_camera
 from .aruco_detect import detect_markers
 from .marker_pose import estimate_marker_poses
 from .cube_pose import estimate_cube_pose
+from .filtering.marker_filter import MarkerFilter, MarkerFilterResult
 
 
 def estimate_cube_from_image(
@@ -18,6 +19,8 @@ def estimate_cube_from_image(
     cube_size: float,
     pair_strategy: str = "first",
     return_overlay: bool = False,
+    marker_filter: Optional[MarkerFilter] = None,
+    timestamp: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Estimate the cube pose from a single image.
@@ -98,6 +101,15 @@ def estimate_cube_from_image(
     # Marker poses
     poses = estimate_marker_poses(detections, K, dist, marker_size)
 
+    filter_result: Optional[MarkerFilterResult] = None
+    if marker_filter is not None:
+        filter_result = marker_filter.apply(detections, poses, timestamp=timestamp)
+        detections = filter_result.detections
+        poses = filter_result.poses
+
+    if len(poses) == 0:
+        raise ValueError("No markers available after filtering.")
+
     # Cube pose
     cube = estimate_cube_pose(poses, cube_size, pair_strategy=pair_strategy)
 
@@ -135,6 +147,11 @@ def estimate_cube_from_image(
             thickness=2,
         )
 
+    filter_debug = {
+        "discarded_ids": filter_result.discarded_ids if filter_result else [],
+        "corrected_ids": filter_result.corrected_ids if filter_result else [],
+    }
+
     return {
         "tvec": cube.t,
         "rvec": cube.rvec,
@@ -143,4 +160,5 @@ def estimate_cube_from_image(
         "num_markers": len(poses),
         "markers": marker_dicts,
         "overlay": overlay,
+        "marker_filter": filter_debug,
     }
