@@ -1,14 +1,14 @@
 ﻿ble:
   name_prefix: "ESP32-RGB-BLE"     # or use "addr" to connect directly to an address
   addr: null                       # e.g. "44:1D:64:F4:AC:D2" on Linux/Mac, GUID on Windows
-  scan_timeout: 8.0                # seconds
+  scan_timeout: 3.0                # seconds
 
 capture:
-  frequency_ms: 200
+  frequency_ms: 100
   output_root: "../captures"       # can also be in OneDrive; keeping it local is faster
-  save_frames: false                # when true, persist frames with pose overlays if available
-  frame_queue_size: 4               # max number of frames waiting in the in-memory stream
-  simulate_camera: false           # true = test mode (uses images from a folder)
+  save_frames: true                # when true, persist frames with pose overlays if available
+  frame_queue_size: 20               # max number of frames waiting in the in-memory stream
+  simulate_camera: true           # true = test mode (uses images from a folder)
   camera_type: "pylon"             # "opencv" for webcam or "pylon" for basler.
   camera_id: 0                     # webcam id (0 usually works)
   camera_serial: 23324651          # serial number for industrial cameras
@@ -32,7 +32,7 @@ pose:
       "3": "+X"
       "4": "-Z"
     marker_filter:
-      active_marker_filter: false
+      active_marker_filter: true
       try_adj_marker: false
       area_threshold_px: 1500.0
   camera_calibration_npz: "../calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
@@ -40,7 +40,7 @@ pose:
 runtime:
   debug: false                      # extra debug behavior
   log_level: INFO                 # DEBUG, INFO, WARNING, ERROR
-  log_to_file: false               # write global app.log in addition to console
+  log_to_file: true               # write global app.log in addition to console
 
 plot:
-  default_pose_json: "../captures/session_2025-09-30_15-42-09__2025-09-30_15-42-20_pose.json"
+  default_pose_json: "../captures/session_2025-10-27_12-43-59_pose.json"
