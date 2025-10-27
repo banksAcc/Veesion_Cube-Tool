@@ -32,7 +32,7 @@ Quando l'ESP32 invia `START`, `SessionManager` crea una cartella `session_<times
 
 Alla ricezione di `END`, `SessionManager` chiude la sessione, notifica il worker tramite `PoseEndMessage` e attende la flush finale della coda. Il worker scrive due artefatti centrali:
 - un JSON `<session>_pose.json` con tutti i frame elaborati (posizione e orientazione cubo, eventuali pose della punta);
-- un CSV `<session>_pose.csv` con intestazioni `frame_index,timestamp,ok,tip_x,...,tip_rx`, dove gli angoli Euler sono espressi in radianti secondo la convenzione intrinseca Z–Y–X (funzione `_rotation_matrix_to_euler_zyx`).
+- un CSV `<session>_pose.csv` con intestazioni `frame_index,timestamp,ok,tip_x,...,tip_rz2`, dove gli angoli Euler sono espressi in radianti secondo la convenzione intrinseca Z–Y–Z (funzione `_rotation_matrix_to_euler_zyz`).
 Durante l'elaborazione il worker invia messaggi BLE `BLE_COMPUTATION_START/END` che il firmware può visualizzare sul display.
 
 ### Pipeline in memoria
@@ -55,7 +55,7 @@ Per stabilizzare l'uso dei marker nel tempo abbiamo introdotto il filtro opziona
 Il risultato del filtro (`MarkerFilterResult`) viene propagato alla pipeline PC così da tracciare marker scartati/corretti nel JSON finale.
 
 ### Calcolo della punta e orientazione
-`PoseWorker` non si limita alla posa del cubo: la funzione `_compute_wand_tip` combina le normali delle facce associate a direzioni note (`wand_directions` in configurazione) e, applicando l'offset `wand_offset_m`, ricostruisce la posizione della punta rispetto al centro del cubo. La matrice di rotazione della punta viene derivata con `_compute_tip_rotation`, scegliendo un asse X coerente con il cubo e ortogonale alla direzione della bacchetta; da qui calcoliamo gli Euler ZYX, memorizzati sia in `euler_tip` sia nel vettore `tip_pose` (posizione + angoli) serializzato nel CSV.
+`PoseWorker` non si limita alla posa del cubo: la funzione `_compute_wand_tip` combina le normali delle facce associate a direzioni note (`wand_directions` in configurazione) e, applicando l'offset `wand_offset_m`, ricostruisce la posizione della punta rispetto al centro del cubo. La matrice di rotazione della punta viene derivata con `_compute_tip_rotation`, scegliendo un asse X coerente con il cubo e ortogonale alla direzione della bacchetta; da qui calcoliamo gli Euler ZYZ, memorizzati sia in `euler_tip` sia nel vettore `tip_pose` (posizione + angoli) serializzato nel CSV.
 
 ### Strumenti di visualizzazione
 Per l'analisi qualitativa e le presentazioni, `cube_minimal` offre funzioni di overlay in [`cube_pose/viz.py`](../cube_minimal/cube_minimal/cube_pose/viz.py):

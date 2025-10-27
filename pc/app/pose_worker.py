@@ -89,26 +89,27 @@ class PoseWorker:
         self.save_executor = ThreadPoolExecutor(max_workers=1)
 
     @staticmethod
-    def _rotation_matrix_to_euler_zyx(R: "np.ndarray") -> Optional["np.ndarray"]:
+    def _rotation_matrix_to_euler_zyz(R: "np.ndarray") -> Optional["np.ndarray"]:
         if np is None:
             return None
         matrix = np.asarray(R, dtype=float)
         if matrix.shape != (3, 3):
             return None
 
-        sy = float(np.sqrt(matrix[0, 0] ** 2 + matrix[1, 0] ** 2))
-        singular = sy < 1e-9
+        sin_beta = float(np.sqrt(matrix[0, 2] ** 2 + matrix[1, 2] ** 2))
+        cos_beta = float(np.clip(matrix[2, 2], -1.0, 1.0))
+        singular = sin_beta < 1e-9
 
         if not singular:
-            rz = float(np.arctan2(matrix[1, 0], matrix[0, 0]))
-            ry = float(np.arctan2(-matrix[2, 0], sy))
-            rx = float(np.arctan2(matrix[2, 1], matrix[2, 2]))
+            alpha = float(np.arctan2(matrix[0, 2], -matrix[1, 2]))
+            beta = float(np.arccos(cos_beta))
+            gamma = float(np.arctan2(matrix[2, 0], matrix[2, 1]))
         else:
-            rz = float(np.arctan2(-matrix[0, 1], matrix[1, 1]))
-            ry = float(np.arctan2(-matrix[2, 0], sy))
-            rx = 0.0
+            beta = 0.0 if cos_beta > 0.0 else float(np.pi)
+            alpha = float(np.arctan2(matrix[1, 0], matrix[0, 0]))
+            gamma = 0.0
 
-        return np.array([rz, ry, rx], dtype=float)
+        return np.array([alpha, beta, gamma], dtype=float)
 
     async def start(self) -> None:
         """Spawn worker tasks if pose estimation is enabled."""
@@ -435,7 +436,7 @@ class PoseWorker:
 
             tip_rot = self._compute_tip_rotation(result, wand_dir)
             if tip_rot is not None:
-                euler = self._rotation_matrix_to_euler_zyx(tip_rot)
+                euler = self._rotation_matrix_to_euler_zyz(tip_rot)
                 if euler is not None:
                     frame_entry["euler_tip"] = [float(x) for x in euler]
                     frame_entry["tip_pose"] = [
@@ -578,9 +579,9 @@ class PoseWorker:
                         "tip_x",
                         "tip_y",
                         "tip_z",
-                        "tip_rz",
+                        "tip_rz1",
                         "tip_ry",
-                        "tip_rx",
+                        "tip_rz2",
                     ]
                 )
                 for idx, frame in enumerate(job.results.get("frames", []), start=1):

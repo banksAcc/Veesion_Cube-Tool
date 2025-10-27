@@ -52,14 +52,14 @@ stores a list of frame objects containing:
 
 * `tvec_tip`: Cartesian tip position expressed in metres relative to the camera.
 * `wand_direction`: Normalised tip direction vector in camera coordinates.
-* `euler_tip`: Tip orientation expressed as Z‑Y‑X intrinsic Euler angles
-  (`rz`, `ry`, `rx`) in radians.
-* `tip_pose`: Convenience tuple `(x, y, z, rz, ry, rx)` merging position and
+* `euler_tip`: Tip orientation expressed as Z‑Y‑Z intrinsic Euler angles
+  (`rz1`, `ry`, `rz2`) in radians.
+* `tip_pose`: Convenience tuple `(x, y, z, rz1, ry, rz2)` merging position and
   orientation. Downstream consumers should prefer this when available.
 
 The accompanying CSV mirrors the JSON content with one row per frame and the
-columns: `frame_index`, `timestamp`, `ok`, `tip_x`, `tip_y`, `tip_z`, `tip_rz`,
-`tip_ry`, `tip_rx`. Numerical values are emitted in metres/radians to ease data
+columns: `frame_index`, `timestamp`, `ok`, `tip_x`, `tip_y`, `tip_z`, `tip_rz1`,
+`tip_ry`, `tip_rz2`. Numerical values are emitted in metres/radians to ease data
 analysis in spreadsheets or plotting tools.
 
 ## Quick start
