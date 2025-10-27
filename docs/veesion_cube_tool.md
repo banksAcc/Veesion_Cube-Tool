@@ -63,11 +63,11 @@ Per l'analisi qualitativa e le presentazioni, `cube_minimal` offre funzioni di o
 - `draw_small_axes` visualizza gli assi locali del marker o del cubo;
 - `draw_wirecube` proietta un reticolo del cubo nel piano immagine;
 - `project_points_camframe` consente di verificare la proiezione di punti 3D nel frame camera.
-Quando `estimate_cube_from_image` viene invocata con `return_overlay=True`, queste funzioni generano un'immagine annotata che il worker può salvare se `capture.save_frames` è attivo.
+Quando `estimate_cube_from_image` viene invocata con `return_overlay=True`, queste funzioni generano un'immagine annotata che il worker può salvare se `capture.save_frames` è attivo. L'overlay viene salvato accanto al TIFF originale usando il suffisso `_overlay` quando `pose.save_overlay` è abilitato.
 
 ## Output dati e logging
 Ogni sessione produce:
-- cartella `session_*` con log di cattura (`session.log`) e, se richiesto, i frame originali e gli overlay;
+- cartella `session_*` con log di cattura (`session.log`) e, se richiesto, i frame originali (`.tiff`) più le versioni annotate `*_overlay.tiff`;
 - file JSON/CSV di posa nel percorso radice dell'app (`captures/` o directory configurata). Il formato CSV è pensato per integrazione con strumenti di robotica o analisi offline, mentre il JSON conserva tutti i dettagli (inclusi vettori `rvec`, `tvec`, numero di marker, info del filtro).
 Il sistema registra inoltre log globali (`app.log` se `runtime.log_to_file` è `true`) e log per categoria (`POSE`, `SESSION`, `CAPTURE`) accessibili via console.
 

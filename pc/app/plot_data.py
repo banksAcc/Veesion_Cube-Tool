@@ -14,6 +14,7 @@ import numpy as np
 import yaml
 
 DEFAULT_CONFIG_NAME = "config.yaml"
+OVERLAY_SUFFIX = "_overlay"
 
 
 def load_config(config_path: Path) -> dict[str, Any]:
@@ -50,13 +51,21 @@ def resolve_session_path(
     return path
 
 
-def load_tvecs(session_path: Path) -> np.ndarray:
-    """Return an Nx3 array with translation vectors from a capture session."""
+def load_session_data(session_path: Path) -> dict[str, Any]:
+    """Load pose session JSON data."""
     if not session_path.exists():
         raise FileNotFoundError(session_path)
 
     data = json.loads(session_path.read_text(encoding="utf-8"))
-    frames: Iterable[dict] = data.get("frames", [])
+    if not isinstance(data, dict):
+        raise ValueError(f"Session file must contain a JSON object: {session_path}")
+    return data
+
+
+def load_tvecs(session_data: dict[str, Any], session_path: Path) -> np.ndarray:
+    """Return an Nx3 array with translation vectors from a capture session."""
+
+    frames: Iterable[dict] = session_data.get("frames", [])
 
     tvecs: List[Sequence[float]] = []
     for frame in frames:
@@ -76,6 +85,49 @@ def load_tvecs(session_path: Path) -> np.ndarray:
         raise ValueError(f"No valid translation vectors found in {session_path}")
 
     return np.asarray(tvecs, dtype=float)
+
+
+def infer_session_directory(session_file: Path) -> Path:
+    """Return the directory that contains raw/overlay frames for a session JSON."""
+
+    stem = session_file.stem
+    if stem.endswith("_pose"):
+        stem = stem[: -len("_pose")]
+    return session_file.with_name(stem)
+
+
+def overlay_path_for_frame(session_file: Path, frame_name: str) -> Path:
+    """Return the overlay file path for a given frame name using the *_overlay convention."""
+
+    session_dir = infer_session_directory(session_file)
+    frame_path = session_dir / frame_name
+    return frame_path.with_name(f"{frame_path.stem}{OVERLAY_SUFFIX}{frame_path.suffix}")
+
+
+def first_overlay_pair(
+    session_file: Path, session_data: dict[str, Any]
+) -> tuple[Path, Path] | None:
+    """Return the first pair of (raw, overlay) paths, if available."""
+
+    frames = session_data.get("frames")
+    if not isinstance(frames, list):
+        return None
+
+    session_dir = infer_session_directory(session_file)
+    for frame in frames:
+        if not isinstance(frame, dict):
+            continue
+        filename = frame.get("file")
+        if not filename:
+            continue
+        raw_path = session_dir / filename
+        overlay_name = frame.get("overlay_file")
+        if overlay_name:
+            overlay_path = session_dir / overlay_name
+        else:
+            overlay_path = overlay_path_for_frame(session_file, filename)
+        return raw_path, overlay_path
+    return None
 
 
 def plot_trajectory(tvecs: np.ndarray, title: str) -> None:
@@ -147,13 +199,32 @@ def main() -> None:
         default=None,
         help="Custom title for the 3D plot",
     )
+    parser.add_argument(
+        "--print-overlay",
+        action="store_true",
+        help="Print the raw/overlay paths for manual TIFF checks",
+    )
     args = parser.parse_args()
 
     config_path = args.config
     config = load_config(config_path)
 
     session_path = resolve_session_path(args.session_file, config, config_path)
-    tvecs = load_tvecs(session_path)
+    session_data = load_session_data(session_path)
+    tvecs = load_tvecs(session_data, session_path)
+
+    if args.print_overlay:
+        pair = first_overlay_pair(session_path, session_data)
+        if pair is None:
+            print("No frame entries with overlay information were found.")
+        else:
+            raw_path, overlay_path = pair
+            print(
+                f"First raw frame path: {raw_path} (exists: {raw_path.exists()})"
+            )
+            print(
+                f"Overlay path ({OVERLAY_SUFFIX}): {overlay_path} (exists: {overlay_path.exists()})"
+            )
 
     title = args.title or f"Capture trajectory - {session_path.stem}"
     plot_trajectory(tvecs, title)

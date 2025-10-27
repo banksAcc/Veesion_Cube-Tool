@@ -8,7 +8,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from cube_minimal.cube_pose.api import estimate_cube_from_image
 from cube_minimal.cube_pose.filtering.marker_filter import MarkerFilter
@@ -51,10 +51,12 @@ class SessionJob:
     label: str
     save_frames: bool
     save_dir: Optional[Path] = None
+    save_overlay: bool = True
     end_iso: Optional[str] = None
     finished: asyncio.Event = field(default_factory=asyncio.Event)
     task: Optional[asyncio.Task] = None
     marker_filter: Optional[MarkerFilter] = None
+    overlay_paths: List[Path] = field(default_factory=list)
 
 
 class PoseWorker:
@@ -83,6 +85,7 @@ class PoseWorker:
         self.pose_cfg: CubePoseConfig = cfg.pose.cube
         self.wand_offset = float(self.pose_cfg.wand_offset_m)
         self.wand_directions = dict(self.pose_cfg.wand_directions)
+        self.save_overlay = bool(cfg.pose.save_overlay)
         self.save_executor = ThreadPoolExecutor(max_workers=1)
 
     @staticmethod
@@ -177,6 +180,7 @@ class PoseWorker:
             label=label,
             save_frames=save_frames,
             save_dir=save_dir,
+            save_overlay=self.save_overlay,
             marker_filter=self._create_marker_filter(),
         )
         job.task = asyncio.create_task(self._run_session(job))
@@ -206,20 +210,7 @@ class PoseWorker:
         self._notify_ble(BLE_COMPUTATION_START)
         loop = asyncio.get_running_loop()
         try:
-            while True:
-                packet = await job.frame_queue.get()
-                if packet is None:
-                    break
-
-                frame_result, overlay = await asyncio.to_thread(
-                    self._process_frame_packet, job, packet
-                )
-                job.results["frames"].append(frame_result)
-
-                if job.save_frames:
-                    await self._save_packet(job, packet, overlay, loop)
-
-                packet.frame = None  # release reference as soon as possible
+            await self._process_session_stream(job, loop)
 
             if not job.finished.is_set():
                 await job.finished.wait()
@@ -228,19 +219,46 @@ class PoseWorker:
                 job.results["end"] = job.results.get("end") or job.start_iso
         finally:
             self._write_results(job)
+            self._cleanup_frames(job)
             self._notify_ble(BLE_COMPUTATION_END)
+
+    async def _process_session_stream(
+        self, job: SessionJob, loop: asyncio.AbstractEventLoop
+    ) -> None:
+        while True:
+            packet = await job.frame_queue.get()
+            if packet is None:
+                break
+
+            frame_result, overlay = await asyncio.to_thread(
+                self._process_frame_packet, job, packet
+            )
+            job.results["frames"].append(frame_result)
+
+            overlay_path = None
+            if overlay is not None and job.save_overlay:
+                overlay_path = self._derive_overlay_path(job, packet)
+                if overlay_path is not None:
+                    job.overlay_paths.append(overlay_path)
+                    frame_result["overlay_file"] = overlay_path.name
+
+            if job.save_frames:
+                await self._save_packet(job, packet, overlay, overlay_path, loop)
+
+            packet.frame = None  # release reference as soon as possible
 
     async def _save_packet(
         self,
         job: SessionJob,
         packet: FramePacket,
         overlay: Any,
+        overlay_path: Optional[Path],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
         if not HAS_CV:
             return
-        image = overlay if overlay is not None else packet.frame
-        if image is None:
+        image = packet.frame
+        if image is None and overlay is None:
             return
 
         path = packet.save_path
@@ -252,17 +270,60 @@ class PoseWorker:
         def _write() -> None:
             path.parent.mkdir(parents=True, exist_ok=True)
             try:
-                ok = cv2.imwrite(str(path), image)
+                if image is not None:
+                    ok = cv2.imwrite(str(path), image)
+                    if not ok:
+                        log.warning(f"cv2.imwrite returned False for {path.name}")
+                if overlay is not None and overlay_path is not None:
+                    overlay_path.parent.mkdir(parents=True, exist_ok=True)
+                    ok_overlay = cv2.imwrite(str(overlay_path), overlay)
+                    if not ok_overlay:
+                        log.warning(
+                            f"cv2.imwrite returned False for {overlay_path.name}"
+                        )
             except Exception as exc:  # pragma: no cover - depends on cv2 backend
                 log.warning(f"Failed to write frame {path.name}: {exc}")
                 return
-            if not ok:
-                log.warning(f"cv2.imwrite returned False for {path.name}")
 
         try:
             await loop.run_in_executor(self.save_executor, _write)
         except Exception as exc:  # pragma: no cover - executor errors are rare
             log.warning(f"Failed to persist frame {path.name}: {exc}")
+
+    def _derive_overlay_path(
+        self, job: SessionJob, packet: FramePacket
+    ) -> Optional[Path]:
+        base_path = packet.save_path
+        if base_path is None:
+            if job.save_dir is None:
+                return None
+            base_path = Path(job.save_dir) / packet.filename
+        stem = base_path.stem
+        suffix = base_path.suffix
+        return base_path.with_name(f"{stem}_overlay{suffix}")
+
+    def _cleanup_frames(self, job: SessionJob) -> None:
+        if not job.save_frames:
+            job.overlay_paths.clear()
+            return
+        if job.save_overlay:
+            job.overlay_paths.clear()
+            return
+        directory = job.save_dir
+        if directory is None:
+            job.overlay_paths.clear()
+            return
+        try:
+            for overlay_path in directory.glob("*_overlay.*"):
+                try:
+                    overlay_path.unlink()
+                except FileNotFoundError:
+                    continue
+                except OSError as exc:
+                    log.debug(f"Could not remove {overlay_path.name}: {exc}")
+        except OSError as exc:
+            log.debug(f"Overlay cleanup failed in {directory}: {exc}")
+        job.overlay_paths.clear()
 
     def _process_frame_packet(
         self, job: SessionJob, packet: FramePacket

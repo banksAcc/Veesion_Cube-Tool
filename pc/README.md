@@ -6,7 +6,7 @@ This directory hosts the Python application that listens for BLE triggers from a
 ## Features
 - Start or stop capture sessions from a physical ESP32 button.
 - Stream captured frames in-memory to the pose worker for low-latency processing.
-- Optionally persist frames (with overlays when available) by enabling `capture.save_frames`.
+- Optionally persist frames (raw images plus `_overlay` diagnostics) by enabling `capture.save_frames` and, if desired, `pose.save_overlay`.
 - Support webcams or industrial cameras such as Basler via `pypylon`.
 
 ## Prerequisites
@@ -84,7 +84,8 @@ Deactivate the virtual environment with `deactivate` when you are done.
 | --- | --- | --- | --- |
 | `capture.frequency_ms` | `capture` | Interval between frame acquisitions in milliseconds. | `200` |
 | `capture.simulate_camera` | `capture` | Toggle between simulated datasets and live cameras. | `true` |
-| `capture.save_frames` | `capture` | Enable asynchronous persistence of frames with overlays when available. | `false` |
+| `capture.save_frames` | `capture` | Enable asynchronous persistence of raw frames. | `false` |
+| `pose.save_overlay` | `pose` | Persist diagnostic overlays next to raw frames (`*_overlay.tiff`). | `true` |
 | `capture.frame_queue_size` | `capture` | Number of frames buffered between capture and pose processing. | `4` |
 | `capture.test_source_dir` | `capture` | Directory for sample frames when simulating. | `../image_to_be_used` |
 | `pose.method` | `pose` | Select the pose solver (`cube`, `custom`). | `cube` |

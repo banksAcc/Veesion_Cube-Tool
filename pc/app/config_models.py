@@ -163,6 +163,7 @@ class PoseConfig:
     max_parallel_jobs: int = 1
     cube: CubePoseConfig = field(default_factory=CubePoseConfig)
     camera_calibration_npz: Optional[Path] = None
+    save_overlay: bool = True
 
     @classmethod
     def from_mapping(cls, raw: Any) -> "PoseConfig":
@@ -176,6 +177,7 @@ class PoseConfig:
             ),
             cube=CubePoseConfig.from_mapping(data.get("cube", {})),
             camera_calibration_npz=Path(calibration) if calibration else None,
+            save_overlay=_coerce_bool(data.get("save_overlay"), cls.save_overlay),
         )
 
 

@@ -19,6 +19,7 @@ pose:
   enabled: true
   method: "cube"                   # "cube" | "custom"
   max_parallel_jobs: 3             # 3 is fine (CPU permitting)
+  save_overlay: true               # save diagnostic overlays next to raw frames using *_overlay suffix
   cube:
     dictionary: "4X4_50"
     marker_size_mm: 54.0      # marker side (only black portion)
