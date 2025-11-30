@@ -8,7 +8,7 @@ capture:
   output_root: "../captures"       # can also be in OneDrive; keeping it local is faster
   save_frames: true                # when true, persist frames with pose overlays if available
   frame_queue_size: 20               # max number of frames waiting in the in-memory stream
-  simulate_camera: true           # true = test mode (uses images from a folder)
+  simulate_camera: false           # true = test mode (uses images from a folder)
   camera_type: "pylon"             # "opencv" for webcam or "pylon" for basler.
   camera_id: 0                     # webcam id (0 usually works)
   camera_serial: 23324651          # serial number for industrial cameras
@@ -33,7 +33,7 @@ pose:
       "3": "+X"
       "4": "-Z"
     marker_filter:
-      active_marker_filter: true
+      active_marker_filter: false
       try_adj_marker: false
       area_threshold_px: 1500.0
   camera_calibration_npz: "../calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
@@ -44,4 +44,4 @@ runtime:
   log_to_file: true               # write global app.log in addition to console
 
 plot:
-  default_pose_json: "../captures/session_2025-10-27_12-43-59_pose.json"
+  default_pose_json: "../captures/session_2025-10-30_10-34-40_pose.json"
