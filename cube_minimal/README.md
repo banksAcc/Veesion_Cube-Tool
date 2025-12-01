@@ -7,7 +7,7 @@ Mini-moduli riutilizzabili per:
 - disegnare overlay di diagnostica.
 
 > **Convenzione**: la Z del **marker** (asse blu) esce dal piano del marker (verso la camera);
-> la Z del **cubo** è definita uscente dal cubo e per costruzione corrisponde a `-Z_marker` di una delle facce.
+> la Z del **cubo** e definita uscente dal cubo e per costruzione corrisponde a `-Z_marker` di una delle facce.
 
 ## Installazione
 

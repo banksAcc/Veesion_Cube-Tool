@@ -10,10 +10,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
+import vendor_cube_minimal  # ensures cube_minimal is importable from the repo checkout
+
 from cube_minimal.cube_pose.api import estimate_cube_from_image
 from cube_minimal.cube_pose.filtering.marker_filter import MarkerFilter
+from cube_minimal.ico_pose import estimate_truncated_ico_from_image
 
-from config_models import AppConfig, CubePoseConfig
+from config_models import AppConfig, CubePoseConfig, IcoPoseConfig
 from logger import get_logger
 from messages import (
     BLE_COMPUTATION_END,
@@ -82,9 +85,10 @@ class PoseWorker:
 
         self.sessions: Dict[str, SessionJob] = {}
         self.method = cfg.pose.method.lower()
-        self.pose_cfg: CubePoseConfig = cfg.pose.cube
-        self.wand_offset = float(self.pose_cfg.wand_offset_m)
-        self.wand_directions = dict(self.pose_cfg.wand_directions)
+        self.pose_cfg_cube: CubePoseConfig = cfg.pose.cube
+        self.pose_cfg_ico = cfg.pose.ico
+        self.wand_offset = float(self.pose_cfg_cube.wand_offset_m)
+        self.wand_directions = dict(self.pose_cfg_cube.wand_directions)
         self.save_overlay = bool(cfg.pose.save_overlay)
         self.save_executor = ThreadPoolExecutor(max_workers=1)
 
@@ -331,6 +335,8 @@ class PoseWorker:
     ) -> Tuple[dict[str, Any], Optional["np.ndarray"]]:
         if self.method == "cube" and HAS_CV and hasattr(cv2, "aruco"):
             return self._process_cube_frame(job, packet)
+        if self.method == "ico" and HAS_CV and hasattr(cv2, "aruco"):
+            return self._process_ico_frame(job, packet)
         if self.method == "custom":
             return (
                 {
@@ -350,20 +356,25 @@ class PoseWorker:
         )
 
     def _create_marker_filter(self) -> MarkerFilter:
-        cfg = self.pose_cfg.marker_filter
+        if self.method == "ico":
+            cfg = self.pose_cfg_ico.marker_filter
+        else:
+            cfg = self.pose_cfg_cube.marker_filter
         active = bool(cfg.active_marker_filter)
         try_adjust = bool(cfg.try_adj_marker)
         threshold = float(cfg.area_threshold_px or 0.0)
+        min_flip = float(cfg.min_flip_interval_s or 0.0)
         return MarkerFilter(
             active=active,
             try_adjust=try_adjust,
             area_threshold_px=threshold,
+            min_flip_interval_s=min_flip,
         )
 
     def _process_cube_frame(
         self, job: SessionJob, packet: FramePacket
     ) -> Tuple[dict[str, Any], Optional["np.ndarray"]]:
-        pose_cfg = self.pose_cfg
+        pose_cfg = self.pose_cfg_cube
         dict_name = pose_cfg.dictionary
         marker_size = float(pose_cfg.marker_size_mm) / 1000.0
         cube_size = float(pose_cfg.cube_size_mm) / 1000.0
@@ -448,6 +459,73 @@ class PoseWorker:
                         float(euler[2]),
                     ]
 
+        return frame_entry, overlay
+
+    def _process_ico_frame(
+        self, job: SessionJob, packet: FramePacket
+    ) -> Tuple[dict[str, Any], Optional["np.ndarray"]]:
+        pose_cfg = self.pose_cfg_ico
+        dict_name = pose_cfg.dictionary
+        marker_size = float(pose_cfg.marker_size_mm) / 1000.0
+        transform_path = pose_cfg.transform_file
+
+        calib_path = self.cfg.pose.camera_calibration_npz
+        if not calib_path:
+            return (
+                {
+                    "file": packet.filename,
+                    "ok": False,
+                    "reason": "no_calibration",
+                },
+                None,
+            )
+
+        try:
+            result = estimate_truncated_ico_from_image(
+                packet.frame,
+                str(calib_path),
+                dict_name,
+                marker_size,
+                transform_path=transform_path,
+                return_overlay=True,
+                marker_filter=job.marker_filter,
+                timestamp=packet.timestamp,
+            )
+        except ValueError:
+            return (
+                {
+                    "file": packet.filename,
+                    "ok": False,
+                    "reason": "no_markers",
+                },
+                None,
+            )
+        except Exception:
+            return (
+                {
+                    "file": packet.filename,
+                    "ok": False,
+                    "reason": "pose_fail",
+                },
+                None,
+            )
+
+        overlay = result.get("overlay")
+
+        frame_entry: dict[str, Any] = {
+            "file": packet.filename,
+            "ok": True,
+            "rvec": [float(x) for x in np.asarray(result["rvec"]).flatten()],
+            "tvec": [float(x) for x in np.asarray(result["tvec"]).flatten()],
+            "reproj_err": None,
+            "num_markers": int(result.get("num_markers", 0)),
+        }
+
+        filter_info = result.get("marker_filter") or {}
+        if filter_info.get("discarded_ids") or filter_info.get("corrected_ids"):
+            frame_entry["marker_filter"] = filter_info
+
+        frame_entry["timestamp"] = packet.iso_timestamp
         return frame_entry, overlay
 
 

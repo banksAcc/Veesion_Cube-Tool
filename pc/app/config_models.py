@@ -106,6 +106,7 @@ class MarkerFilterConfig:
     active_marker_filter: bool = False
     try_adj_marker: bool = False
     area_threshold_px: float = 0.0
+    min_flip_interval_s: float = 0.0
 
     @classmethod
     def from_mapping(cls, raw: Any) -> "MarkerFilterConfig":
@@ -117,6 +118,9 @@ class MarkerFilterConfig:
             try_adj_marker=_coerce_bool(data.get("try_adj_marker"), cls.try_adj_marker),
             area_threshold_px=_coerce_float(
                 data.get("area_threshold_px"), cls.area_threshold_px
+            ),
+            min_flip_interval_s=_coerce_float(
+                data.get("min_flip_interval_s"), cls.min_flip_interval_s
             ),
         )
 
@@ -155,6 +159,27 @@ class CubePoseConfig:
 
 
 @dataclass(frozen=True)
+class IcoPoseConfig:
+    """Configuration specific to the truncated icosahedron backend."""
+
+    dictionary: str = "4X4_50"
+    marker_size_mm: float = 21.0
+    transform_file: Optional[Path] = None
+    marker_filter: MarkerFilterConfig = field(default_factory=MarkerFilterConfig)
+
+    @classmethod
+    def from_mapping(cls, raw: Any) -> "IcoPoseConfig":
+        data = _as_mapping(raw)
+        transform_file = data.get("transform_file")
+        return cls(
+            dictionary=str(data.get("dictionary", cls.dictionary)),
+            marker_size_mm=_coerce_float(data.get("marker_size_mm"), cls.marker_size_mm),
+            transform_file=Path(transform_file) if transform_file else None,
+            marker_filter=MarkerFilterConfig.from_mapping(data.get("marker_filter", {})),
+        )
+
+
+@dataclass(frozen=True)
 class PoseConfig:
     """Configuration for the pose worker."""
 
@@ -162,6 +187,7 @@ class PoseConfig:
     method: str = "cube"
     max_parallel_jobs: int = 1
     cube: CubePoseConfig = field(default_factory=CubePoseConfig)
+    ico: IcoPoseConfig = field(default_factory=IcoPoseConfig)
     camera_calibration_npz: Optional[Path] = None
     save_overlay: bool = True
 
@@ -176,6 +202,7 @@ class PoseConfig:
                 data.get("max_parallel_jobs"), cls.max_parallel_jobs
             ),
             cube=CubePoseConfig.from_mapping(data.get("cube", {})),
+            ico=IcoPoseConfig.from_mapping(data.get("ico", {})),
             camera_calibration_npz=Path(calibration) if calibration else None,
             save_overlay=_coerce_bool(data.get("save_overlay"), cls.save_overlay),
         )

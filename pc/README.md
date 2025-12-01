@@ -93,7 +93,7 @@ Deactivate the virtual environment with `deactivate` when you are done.
 | `runtime.log_level` | `runtime` | Set logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`). | `INFO` |
 | `runtime.log_to_file` | `runtime` | Enable writing aggregated logs to `app.log`. | `false` |
 
-Pose results are saved alongside session folders. Refer to `../cube_minimal/README.md` for details on interpreting the cube pose output and validating calibration.
+Pose results are saved alongside session folders. The `cube_minimal` code is consumed directly from the repository checkout (via `vendor_cube_minimal.py`), so no pip install of that package is required. Refer to `../cube_minimal/README.md` for details on interpreting the cube pose output and validating calibration.
 
 ## License
 All rights reserved.

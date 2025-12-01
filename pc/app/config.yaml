@@ -17,7 +17,7 @@ capture:
 
 pose:
   enabled: true
-  method: "cube"                   # "cube" | "custom"
+  method: "cube"                   # "cube" | "ico" | "custom"
   max_parallel_jobs: 3             # 3 is fine (CPU permitting)
   save_overlay: true               # save diagnostic overlays next to raw frames using *_overlay suffix
   cube:
@@ -34,9 +34,19 @@ pose:
       "4": "-Z"
     marker_filter:
       active_marker_filter: true
+      try_adj_marker: true
+      area_threshold_px: 1500.0
+      min_flip_interval_s: 0.05
+  ico:
+    dictionary: "4X4_50"
+    marker_size_mm: 21.679
+    transform_file: null          # leave null to use built-in transforms
+    marker_filter:
+      active_marker_filter: false
       try_adj_marker: false
       area_threshold_px: 1500.0
-  camera_calibration_npz: "../calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
+      min_flip_interval_s: 0.05
+  camera_calibration_npz: "pc/calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
 
 runtime:
   debug: false                      # extra debug behavior
@@ -44,4 +54,4 @@ runtime:
   log_to_file: true               # write global app.log in addition to console
 
 plot:
-  default_pose_json: "../captures/session_2025-10-27_12-43-59_pose.json"
+  default_pose_json: "../captures/session_2025-10-30_10-34-40_pose.json"
