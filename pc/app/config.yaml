@@ -46,7 +46,7 @@ pose:
       try_adj_marker: false
       area_threshold_px: 1500.0
       min_flip_interval_s: 0.05
-  camera_calibration_npz: "../calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
+  camera_calibration_npz: "pc/app/calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
 
 runtime:
   debug: true                      # extra debug behavior
