@@ -9,7 +9,7 @@ capture:
   save_frames: true                # when true, persist frames with pose overlays if available
   frame_queue_size: 20               # max number of frames waiting in the in-memory stream
   simulate_camera: false           # true = test mode (uses images from a folder)
-  camera_type: "pylon"             # "opencv" for webcam or "pylon" for basler.
+  camera_type: "opencv"             # "opencv" for webcam or "pylon" for basler.
   camera_id: 0                     # webcam id (0 usually works)
   camera_serial: 23324651          # serial number for industrial cameras
   camera_ip: 192.168.1.165         # URL/IP for network cameras
@@ -17,7 +17,7 @@ capture:
 
 pose:
   enabled: true
-  method: "cube"                   # "cube" | "ico" | "custom"
+  method: "ico"                   # "cube" | "ico" | "custom"
   max_parallel_jobs: 3             # 3 is fine (CPU permitting)
   save_overlay: true               # save diagnostic overlays next to raw frames using *_overlay suffix
   cube:
@@ -46,11 +46,11 @@ pose:
       try_adj_marker: false
       area_threshold_px: 1500.0
       min_flip_interval_s: 0.05
-  camera_calibration_npz: "pc/calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
+  camera_calibration_npz: "../calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
 
 runtime:
-  debug: false                      # extra debug behavior
-  log_level: INFO                 # DEBUG, INFO, WARNING, ERROR
+  debug: true                      # extra debug behavior
+  log_level: DEBUG                 # DEBUG, INFO, WARNING, ERROR
   log_to_file: true               # write global app.log in addition to console
 
 plot:

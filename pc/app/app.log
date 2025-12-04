@@ -1,0 +1,1321 @@
+[POSE] starting workers = 3
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+[BLE] No device found.
+[BLE] No address: exiting.
+[POSE] starting workers = 3
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+[BLE] Connected: True
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[SESSION] start @ 2025-12-04T12:35:09.168515 freq=100ms use_camera=False
+[STATE] Capture session STARTED
+[CAPTURE] Capture open failed: No images in ..\image_to_be_used
+[POSE] Pose session started for session_2025-12-04_12-35-09
+[SESSION] stop @ 2025-12-04T12:35:12.840409
+[CAPTURE] Timed out closing frame queue
+[STATE] Capture session STOPPED and queued for pose
+[POSE] Pose session finishing for session_2025-12-04_12-35-09
+[POSE] Pose results written to session_2025-12-04_12-35-09_pose.json
+[POSE] Pose CSV written to session_2025-12-04_12-35-09_pose.csv
+[BLE] Disconnected.
+[BLE] Retrying in 2s ...
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+[BLE] Connected: True
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[BLE] Disconnected.
+[MAIN] Interrupted by user.
+[POSE] starting workers = 3
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+[BLE] Connected: True
+[CAPTURE] Camera opened id=0, freq=100ms
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[SESSION] start @ 2025-12-04T12:36:24.351372 freq=100ms use_camera=True
+[STATE] Capture session STARTED
+[POSE] Pose session started for session_2025-12-04_12-36-24
+[SESSION] stop @ 2025-12-04T12:36:28.431114
+[CAPTURE] Timed out closing frame queue
+[STATE] Capture session STOPPED and queued for pose
+[POSE] Pose session finishing for session_2025-12-04_12-36-24
+[POSE] Pose results written to session_2025-12-04_12-36-24_pose.json
+[POSE] Pose CSV written to session_2025-12-04_12-36-24_pose.csv
+[BLE] Disconnected.
+[CAPTURE] Camera released
+[MAIN] Interrupted by user.
+[POSE] starting workers = 3
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+[BLE] Connected: True
+[CAPTURE] Camera opened id=0, freq=100ms
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[STATE] END received but no active session -> IGNORE (duplicate)
+[SESSION] start @ 2025-12-04T12:39:09.019537 freq=100ms use_camera=True
+[STATE] Capture session STARTED
+[POSE] Pose session started for session_2025-12-04_12-39-09
+[SESSION] stop @ 2025-12-04T12:39:15.718148
+[CAPTURE] Timed out closing frame queue
+[STATE] Capture session STOPPED and queued for pose
+[POSE] Pose session finishing for session_2025-12-04_12-39-09
+[POSE] Pose results written to session_2025-12-04_12-39-09_pose.json
+[POSE] Pose CSV written to session_2025-12-04_12-39-09_pose.csv
+[BLE] Disconnected.
+[CAPTURE] Camera released
+[MAIN] Interrupted by user.
+[POSE] starting workers = 3
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+[BLE] Connected: True
+[CAPTURE] Camera opened id=0, freq=100ms
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[SESSION] start @ 2025-12-04T15:58:09.662728 freq=100ms use_camera=True
+[STATE] Capture session STARTED
+[POSE] Pose session started for session_2025-12-04_15-58-09
+[SESSION] stop @ 2025-12-04T15:58:12.625886
+[CAPTURE] Timed out closing frame queue
+[STATE] Capture session STOPPED and queued for pose
+[POSE] Pose session finishing for session_2025-12-04_15-58-09
+[POSE] Pose results written to session_2025-12-04_15-58-09_pose.json
+[POSE] Pose CSV written to session_2025-12-04_15-58-09_pose.csv
+[BLE] Disconnected.
+[CAPTURE] Camera released
+[MAIN] Interrupted by user.
+[POSE] starting workers = 3
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:C4:DA: BRC1H 00:C4:DA.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:01:41:75: Daikin.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:60:70: Daikin.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:00:EF:13: Daikin.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received D1:EA:60:AD:AA:9B: .
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:C4:DA: BRC1H 00:C4:DA.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:01:D2:0C: Daikin.
+Received 17:AC:5E:1E:C4:23: .
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received 48:75:C4:01:FA:7C: .
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received 21:DE:E3:E5:C2:29: .
+Received B8:F2:55:01:41:75: Daikin.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:01:D2:0C: BRC1H 01:D2:0C.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:00:EF:13: Daikin.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:01:C6:C6: Daikin.
+Received B8:F2:55:01:C6:C6: Ficarella Recept.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received 21:DE:E3:E5:C2:29: .
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received 18:A1:BF:90:15:90: .
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:01:D2:0C: BRC1H 01:D2:0C.
+Received B8:F2:55:00:C6:83: Daikin.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:01:65:AE: Daikin.
+Received DB:E7:A5:98:07:A4: .
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:01:60:70: Daikin.
+Received B8:F2:55:01:60:70: BRC1H 01:60:70.
+Received 48:75:C4:01:FA:7C: .
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received B8:F2:55:00:C6:7B: BRC1H 00:C6:7B.
+Received B8:F2:55:01:C6:C6: Daikin.
+Received B8:F2:55:01:C6:C6: Ficarella Recept.
+Received 07:77:7D:F4:4B:88: .
+Received B8:F2:55:00:EF:13: Daikin.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received 48:75:C4:01:FA:7C: .
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:F1:47: Daikin.
+Received 0C:71:D1:AC:C0:64: .
+Received C3:C7:5E:16:4C:EC: .
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:01:41:75: Daikin.
+Received B8:F2:55:01:41:75: BRC1H 01:41:75.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:01:C6:C6: Daikin.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:00:EF:7E: BRC1H 00:EF:7E.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 03:2D:1D:82:0C:FF: .
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received 21:DE:E3:E5:C2:29: .
+Received B8:F2:55:01:60:70: Daikin.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received 01:26:C5:2F:89:20: .
+Received 48:75:C4:01:FA:7C: .
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received 47:74:33:A4:41:15: .
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:01:C6:C6: Daikin.
+Received B8:F2:55:01:C6:C6: Ficarella Recept.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received B8:F2:55:01:60:70: Daikin.
+Received B8:F2:55:01:60:70: BRC1H 01:60:70.
+Received B8:F2:55:00:F1:47: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:01:D2:0C: BRC1H 01:D2:0C.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received B8:F2:55:00:F7:D6: Corrid. Pres..
+Received 01:26:C5:2F:89:20: .
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:D8:92: Daikin.
+Received 48:75:C4:01:FA:7C: .
+Received 01:26:C5:2F:89:20: .
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received 01:26:C5:2F:89:20: .
+Received B8:F2:55:00:F7:D6: Daikin.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:00:EF:7E: BRC1H 00:EF:7E.
+Received 0C:71:D1:AC:C0:64: .
+Received B8:F2:55:01:41:75: Daikin.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:01:60:B5: Daikin.
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received 1C:41:90:D4:3D:D9: BRC1H D4:3D:D9.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:00:EF:7E: BRC1H 00:EF:7E.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received 07:77:7D:F4:4B:88: .
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:C4:DA: BRC1H 00:C4:DA.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 03:2D:1D:82:0C:FF: .
+Received B8:F2:55:01:41:75: Daikin.
+Received B8:F2:55:01:41:75: BRC1H 01:41:75.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received 07:77:7D:F4:4B:88: .
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:C4:DA: BRC1H 00:C4:DA.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:01:60:B5: Daikin.
+Received 03:2D:1D:82:0C:FF: .
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:00:C4:DA: Daikin.
+Received 47:74:33:A4:41:15: .
+Received 47:74:33:A4:41:15: .
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:01:D2:0C: BRC1H 01:D2:0C.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:01:41:75: Daikin.
+Received B8:F2:55:01:41:75: BRC1H 01:41:75.
+Received 48:70:1E:5B:AB:94: .
+Received 21:DE:E3:E5:C2:29: .
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:D8:92: Daikin.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:68:CE: BRC1H 01:68:CE.
+Received B8:F2:55:01:60:70: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F1:47: Daikin.
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:C4:DA: BRC1H 00:C4:DA.
+Received 48:75:C4:01:FA:7C: .
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:01:D2:0C: BRC1H 01:D2:0C.
+Received B8:F2:55:01:60:B5: Daikin.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:D8:92: Daikin.
+39 devices found. Watcher status: <BluetoothLEAdvertisementWatcherStatus.STOPPED: 3>.
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+4 devices found. Watcher status: <BluetoothLEAdvertisementWatcherStatus.STOPPED: 3>.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Connecting to BLE device @ 44:1D:64:F4:AC:D2
+getting services (service_cache_mode=None, cache_mode=None)...
+session_status_changed_event_handler: id: BluetoothLE#BluetoothLE58:ce:2a:d7:31:32-44:1d:64:f4:ac:d2, error: <BluetoothError.SUCCESS: 0>, status: <GattSessionStatus.ACTIVE: 1>
+max_pdu_size_changed_handler: 255
+44:1D:64:F4:AC:D2: services changed
+44:1D:64:F4:AC:D2: services changed
+[BLE] Connected: True
+[CAPTURE] Camera opened id=0, freq=100ms
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[SESSION] start @ 2025-12-04T15:58:55.977552 freq=100ms use_camera=True
+[STATE] Capture session STARTED
+[POSE] Pose session started for session_2025-12-04_15-58-55
+[SESSION] stop @ 2025-12-04T15:58:58.871422
+[CAPTURE] Timed out closing frame queue
+[STATE] Capture session STOPPED and queued for pose
+[POSE] Pose session finishing for session_2025-12-04_15-58-55
+[POSE] Pose results written to session_2025-12-04_15-58-55_pose.json
+[POSE] Pose CSV written to session_2025-12-04_15-58-55_pose.csv
+[BLE] Disconnected.
+[CAPTURE] Camera released
+Disconnecting from BLE device...
+[MAIN] Interrupted by user.
+[POSE] starting workers = 3
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:01:C6:C6: Daikin.
+Received B8:F2:55:01:C6:C6: Ficarella Recept.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:01:41:75: Daikin.
+Received B8:F2:55:01:60:70: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:00:EF:13: Daikin.
+Received B8:F2:55:01:56:60: Daikin.
+Received 01:2F:30:39:E9:94: .
+Received B8:F2:55:00:85:84: Daikin.
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received 07:77:7D:F4:4B:88: .
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 01:26:C5:2F:89:20: .
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:01:C6:C6: Daikin.
+Received B8:F2:55:01:C6:C6: Ficarella Recept.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received 07:77:7D:F4:4B:88: .
+Received B8:F2:55:00:C6:7B: Daikin.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:01:60:B5: Ing. Maltoni F..
+Received B8:F2:55:00:C4:DA: Daikin.
+Received 04:1C:8E:6D:D1:EE: .
+Received B8:F2:55:01:60:70: Daikin.
+Received B8:F2:55:01:60:70: BRC1H 01:60:70.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:85:84: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 78:BC:30:39:E9:94: .
+Received 78:BC:30:39:E9:94: .
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:01:C6:C6: Daikin.
+Received B8:F2:55:01:D2:0C: Daikin.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received 21:DE:E3:E5:C2:29: .
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received 48:75:C4:01:FA:7C: .
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received 21:DE:E3:E5:C2:29: .
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received B8:F2:55:00:F7:D6: Corrid. Pres..
+Received B8:F2:55:00:C6:7B: Daikin.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:00:EF:7E: BRC1H 00:EF:7E.
+Received 37:68:07:90:ED:95: .
+Received B8:F2:55:00:85:84: Daikin.
+Received B8:F2:55:00:85:84: BRC1H 00:85:84.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received 37:68:07:90:ED:95: .
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received 37:68:07:90:ED:95: .
+Received 01:2F:30:39:E9:94: .
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:68:CE: BRC1H 01:68:CE.
+Received 6C:45:96:5B:91:04: .
+Received 51:6E:E4:61:CE:9B: .
+Received 51:6E:E4:61:CE:9B: .
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received 01:26:C5:2F:89:20: .
+Received 07:77:7D:F4:4B:88: .
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 07:77:7D:F4:4B:88: .
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:01:23:B4: Daikin.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:00:EF:7E: BRC1H 00:EF:7E.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received B8:F2:55:01:C6:C6: Daikin.
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received 48:75:C4:01:FA:7C: .
+Received B8:F2:55:01:65:AE: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received 0C:71:D1:AC:C0:64: .
+Received B8:F2:55:00:E9:B7: Daikin.
+Received 48:75:C4:01:FA:7C: .
+Received 0C:71:D1:AC:C0:64: .
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received 21:DE:E3:E5:C2:29: .
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:00:EF:7E: BRC1H 00:EF:7E.
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received 48:75:C4:01:FA:7C: .
+Received 21:DE:E3:E5:C2:29: .
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received B8:F2:55:00:85:84: Daikin.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received 37:68:07:90:ED:95: .
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received B8:F2:55:00:F7:D6: Corrid. Pres..
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 01:26:C5:2F:89:20: .
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:68:CE: BRC1H 01:68:CE.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:23:B4: Daikin.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 01:26:C5:2F:89:20: .
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received 1C:41:90:D4:3D:D9: BRC1H D4:3D:D9.
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:EF:13: Daikin.
+Received B8:F2:55:01:C6:C6: Daikin.
+Received B8:F2:55:01:D2:0C: Daikin.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received 0C:71:D1:AC:C0:64: .
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received 0C:71:D1:AC:C0:64: .
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received 01:2F:30:39:E9:94: .
+Received 21:DE:E3:E5:C2:29: .
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received 4B:FE:34:E4:13:76: .
+Received B8:F2:55:01:68:CE: Daikin.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+37 devices found. Watcher status: <BluetoothLEAdvertisementWatcherStatus.STOPPED: 3>.
+Received 21:DE:E3:E5:C2:29: .
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+Received B8:F2:55:00:6D:CC: Daikin.
+Received 0C:71:D1:AC:C0:64: .
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+3 devices found. Watcher status: <BluetoothLEAdvertisementWatcherStatus.STOPPED: 3>.
+Connecting to BLE device @ 44:1D:64:F4:AC:D2
+getting services (service_cache_mode=None, cache_mode=None)...
+session_status_changed_event_handler: id: BluetoothLE#BluetoothLE58:ce:2a:d7:31:32-44:1d:64:f4:ac:d2, error: <BluetoothError.SUCCESS: 0>, status: <GattSessionStatus.ACTIVE: 1>
+max_pdu_size_changed_handler: 255
+44:1D:64:F4:AC:D2: services changed
+44:1D:64:F4:AC:D2: services changed
+[BLE] Connected: True
+[CAPTURE] Camera opened id=0, freq=100ms
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[SESSION] start @ 2025-12-04T16:02:42.027872 freq=100ms use_camera=True
+[STATE] Capture session STARTED
+[POSE] Pose session started for session_2025-12-04_16-02-42
+[SESSION] stop @ 2025-12-04T16:02:46.174124
+[CAPTURE] Timed out closing frame queue
+[STATE] Capture session STOPPED and queued for pose
+[POSE] Pose session finishing for session_2025-12-04_16-02-42
+[POSE] Pose results written to session_2025-12-04_16-02-42_pose.json
+[POSE] Pose CSV written to session_2025-12-04_16-02-42_pose.csv
+[BLE] Disconnected.
+[CAPTURE] Camera released
+Disconnecting from BLE device...
+[MAIN] Interrupted by user.
+[POSE] starting workers = 3
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 78:BC:30:39:E9:94: .
+Received 78:BC:30:39:E9:94: .
+Received B8:F2:55:01:60:70: Daikin.
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received 1C:41:90:D4:3D:D9: BRC1H D4:3D:D9.
+Received B8:F2:55:01:D2:0C: Daikin.
+Received 02:31:EC:FB:F9:56: .
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:01:C6:C6: Daikin.
+Received 02:31:EC:FB:F9:56: .
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:C4:86: Daikin.
+Received B8:F2:55:01:60:70: Daikin.
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:68:CE: Daikin.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received 37:68:07:90:ED:95: .
+Received B8:F2:55:01:C6:C6: Daikin.
+Received B8:F2:55:00:EF:13: Daikin.
+Received B8:F2:55:01:63:54: Daikin.
+Received B8:F2:55:01:63:54: BRC1H 01:63:54.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:01:41:75: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received CF:14:5E:87:3F:82: .
+Received 1C:02:27:AC:BA:E3: .
+Received 37:68:07:90:ED:95: .
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 78:BC:30:39:E9:94: .
+Received 78:BC:30:39:E9:94: .
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received 1C:41:90:D4:3D:D9: BRC1H D4:3D:D9.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:01:68:CE: Daikin.
+Received 78:EC:7F:94:69:E4: .
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:68:CE: BRC1H 01:68:CE.
+Received B8:F2:55:00:85:84: Daikin.
+Received B8:F2:55:00:85:84: BRC1H 00:85:84.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:01:65:AE: Daikin.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:01:41:75: Daikin.
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received 78:EC:7F:94:69:E4: .
+Received 02:31:EC:FB:F9:56: .
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:00:C4:86: Daikin.
+Received B8:F2:55:00:C4:86: BRC1H 00:C4:86.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:01:65:AE: Daikin.
+Received B8:F2:55:01:65:AE: Riunioni Presid..
+Received B8:F2:55:00:C6:83: Daikin.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:01:41:75: Daikin.
+Received B8:F2:55:01:41:75: BRC1H 01:41:75.
+Received B8:F2:55:01:63:54: Daikin.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received 1D:A6:B4:07:20:BC: .
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received B8:F2:55:00:85:84: Daikin.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:EF:13: Daikin.
+Received B8:F2:55:00:C4:86: Daikin.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:68:CE: BRC1H 01:68:CE.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:F1:47: Daikin.
+Received B8:F2:55:00:F1:47: BRC1H 00:F1:47.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:C4:86: Daikin.
+Received B8:F2:55:01:63:54: Daikin.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 78:EC:7F:94:69:E4: .
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received 02:31:EC:FB:F9:56: .
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:68:CE: BRC1H 01:68:CE.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received 91:01:32:00:23:82: .
+Received 91:01:32:00:23:82: SEL910132002382.
+Received 01:2F:30:39:E9:94: .
+Received 01:2F:30:39:E9:94: JLab GO Work 2-BLE.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:85:84: Daikin.
+Received B8:F2:55:00:85:84: BRC1H 00:85:84.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:01:65:AE: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received 39:70:71:C0:53:C2: .
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received B8:F2:55:00:F1:47: Daikin.
+Received B8:F2:55:00:85:84: Daikin.
+Received B8:F2:55:00:85:84: BRC1H 00:85:84.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:01:65:AE: Daikin.
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:85:84: Daikin.
+Received B8:F2:55:00:85:84: BRC1H 00:85:84.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received 1D:A6:B4:07:20:BC: .
+Received B8:F2:55:01:63:54: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received 39:70:71:C0:53:C2: .
+Received B8:F2:55:01:D2:0C: Daikin.
+Received E4:FA:5B:92:85:15: .
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 39:70:71:C0:53:C2: .
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received 1C:02:27:AC:BA:E3: .
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 1C:02:27:AC:BA:E3: .
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received 78:EC:7F:94:69:E4: .
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:00:C4:86: Daikin.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:00:EF:7E: BRC1H 00:EF:7E.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 02:31:EC:FB:F9:56: .
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:01:68:CE: Daikin.
+Received 02:31:EC:FB:F9:56: .
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:01:60:70: Daikin.
+Received B8:F2:55:00:C4:86: Daikin.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:01:65:AE: Daikin.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:00:EF:13: Daikin.
+39 devices found. Watcher status: <BluetoothLEAdvertisementWatcherStatus.STOPPED: 3>.
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:C4:DA: BRC1H 00:C4:DA.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:01:60:B5: Ing. Maltoni F..
+Received B8:F2:55:01:41:75: Daikin.
+Received B8:F2:55:01:C6:C6: Daikin.
+Received C7:67:25:19:4F:1A: .
+Received B8:F2:55:00:EF:13: Daikin.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received B8:F2:55:00:F7:D6: Corrid. Pres..
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:C4:DA: BRC1H 00:C4:DA.
+Received B8:F2:55:00:C4:86: Daikin.
+Received B8:F2:55:00:F1:47: Daikin.
+Received B8:F2:55:01:65:AE: Daikin.
+Received B8:F2:55:01:C6:C6: Daikin.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+16 devices found. Watcher status: <BluetoothLEAdvertisementWatcherStatus.STOPPED: 3>.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Connecting to BLE device @ 44:1D:64:F4:AC:D2
+getting services (service_cache_mode=None, cache_mode=None)...
+session_status_changed_event_handler: id: BluetoothLE#BluetoothLE58:ce:2a:d7:31:32-44:1d:64:f4:ac:d2, error: <BluetoothError.SUCCESS: 0>, status: <GattSessionStatus.ACTIVE: 1>
+max_pdu_size_changed_handler: 255
+44:1D:64:F4:AC:D2: services changed
+44:1D:64:F4:AC:D2: services changed
+[BLE] Connected: True
+[CAPTURE] Camera opened id=0, freq=100ms
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[SESSION] start @ 2025-12-04T16:09:39.552234 freq=100ms use_camera=True
+[STATE] Capture session STARTED
+[POSE] Pose session started for session_2025-12-04_16-09-39
+[SESSION] stop @ 2025-12-04T16:09:40.690314
+[CAPTURE] Timed out closing frame queue
+[STATE] Capture session STOPPED and queued for pose
+[POSE] Pose session finishing for session_2025-12-04_16-09-39
+[POSE] Pose results written to session_2025-12-04_16-09-39_pose.json
+[POSE] Pose CSV written to session_2025-12-04_16-09-39_pose.csv
+[BLE] Disconnected.
+[CAPTURE] Camera released
+Disconnecting from BLE device...
+[MAIN] Interrupted by user.
+[POSE] starting workers = 3
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:EF:13: Daikin.
+Received 1C:02:27:AC:BA:E3: .
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:68:CE: BRC1H 01:68:CE.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:01:65:AE: Daikin.
+Received B8:F2:55:01:65:AE: Riunioni Presid..
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:68:CE: BRC1H 01:68:CE.
+Received 1D:A6:B4:07:20:BC: .
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received 75:DB:4D:B0:35:46: .
+Received 1D:A6:B4:07:20:BC: .
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:85:84: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received 70:41:20:E9:0B:94: .
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received 1C:41:90:D4:3D:D9: BRC1H D4:3D:D9.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received B8:F2:55:01:60:70: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received 78:EC:7F:94:69:E4: .
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:68:CE: Daikin.
+Received 78:EC:7F:94:69:E4: .
+Received 02:31:EC:FB:F9:56: .
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:C4:86: Daikin.
+Received B8:F2:55:00:C4:86: BRC1H 00:C4:86.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:68:CE: BRC1H 01:68:CE.
+Received 1C:02:27:AC:BA:E3: .
+Received 02:31:EC:FB:F9:56: .
+Received 40:00:00:CD:6B:42: .
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:02:27:AC:BA:E3: .
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:6D:CC: BRC1H 00:6D:CC.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received 1C:02:27:AC:BA:E3: .
+Received B8:F2:55:01:68:CE: Daikin.
+Received 39:70:71:C0:53:C2: .
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:C4:86: Daikin.
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:01:D2:0C: BRC1H 01:D2:0C.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received 44:51:D2:EF:62:F6: .
+Received 1D:A6:B4:07:20:BC: .
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received 1C:41:90:D4:3D:D9: Daikin.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received B8:F2:55:01:60:70: Daikin.
+Received B8:F2:55:01:60:70: BRC1H 01:60:70.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received 63:6D:21:FC:44:87: .
+Received 63:6D:21:FC:44:87: .
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:00:EF:13: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received B8:F2:55:01:65:AE: Daikin.
+Received B8:F2:55:01:60:70: Daikin.
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:01:60:B5: Ing. Maltoni F..
+Received 02:31:EC:FB:F9:56: .
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received 02:31:EC:FB:F9:56: .
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:01:41:75: Daikin.
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:01:60:70: Daikin.
+Received B8:F2:55:01:60:70: BRC1H 01:60:70.
+Received B8:F2:55:00:C4:86: Daikin.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:D8:92: Daikin.
+Received 39:70:71:C0:53:C2: .
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:41:75: Daikin.
+Received B8:F2:55:01:41:75: BRC1H 01:41:75.
+Received B8:F2:55:01:60:70: Daikin.
+Received B8:F2:55:00:C4:DA: Daikin.
+Received B8:F2:55:00:C4:DA: BRC1H 00:C4:DA.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received B8:F2:55:00:E8:A4: BRC1H 00:E8:A4.
+Received 63:6D:21:FC:44:87: .
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:01:65:AE: Daikin.
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:01:56:60: BRC1H 01:56:60.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received 7C:64:B3:EE:0C:B6: .
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:00:F6:07: Daikin.
+Received B8:F2:55:00:F6:07: BRC1H 00:F6:07.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:68:CE: BRC1H 01:68:CE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Received 91:01:32:00:23:82: .
+Received 91:01:32:00:23:82: SEL910132002382.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received B8:F2:55:00:D5:DB: Daikin.
+Received B8:F2:55:00:D5:DB: BRC1H 00:D5:DB.
+Received B8:F2:55:00:6D:CC: Daikin.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 01:2F:30:39:E9:94: .
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received B8:F2:55:01:65:AE: Daikin.
+Received B8:F2:55:01:65:AE: Riunioni Presid..
+Received B8:F2:55:01:56:60: Daikin.
+Received B8:F2:55:00:85:84: Daikin.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received 02:31:EC:FB:F9:56: .
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received 73:33:96:ED:8F:F7: .
+Received 78:EC:7F:94:69:E4: .
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:68:CE: BRC1H 01:68:CE.
+Received B8:F2:55:01:C6:C6: Daikin.
+Received B8:F2:55:00:C6:7B: Daikin.
+Received B8:F2:55:00:C6:83: Daikin.
+Received B8:F2:55:00:F4:E6: Daikin.
+Received B8:F2:55:00:F4:E6: BRC1H 00:F4:E6.
+Received B8:F2:55:00:F6:07: Daikin.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:01:41:75: Daikin.
+Received B8:F2:55:01:60:70: Daikin.
+40 devices found. Watcher status: <BluetoothLEAdvertisementWatcherStatus.STOPPED: 3>.
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+Received 39:70:71:C0:53:C2: .
+Received 1D:A6:B4:07:20:BC: .
+Received B8:F2:55:00:EF:7E: Daikin.
+Received B8:F2:55:00:EF:7E: BRC1H 00:EF:7E.
+Received B8:F2:55:00:E8:A4: Daikin.
+Received 1C:41:90:D4:E6:D6: Daikin.
+Received 1C:41:90:D4:E6:D6: BRC1H D4:E6:D6.
+Received B8:F2:55:01:D2:0C: Daikin.
+Received B8:F2:55:01:D2:0C: BRC1H 01:D2:0C.
+Received B8:F2:55:01:23:B4: Daikin.
+Received B8:F2:55:01:23:B4: BRC1H 01:23:B4.
+Received B8:F2:55:00:E9:B7: Daikin.
+Received B8:F2:55:00:E9:B7: Ficarella - B.M..
+Received B8:F2:55:01:60:B5: Daikin.
+Received B8:F2:55:00:85:84: Daikin.
+Received B8:F2:55:00:85:84: BRC1H 00:85:84.
+Received B8:F2:55:00:D8:92: Daikin.
+Received B8:F2:55:00:D8:92: BRC1H 00:D8:92.
+Received B8:F2:55:01:63:54: Daikin.
+Received B8:F2:55:01:60:70: Daikin.
+Received B8:F2:55:01:60:70: BRC1H 01:60:70.
+Received B8:F2:55:00:F7:D6: Daikin.
+Received B8:F2:55:01:68:CE: Daikin.
+Received B8:F2:55:01:68:CE: BRC1H 01:68:CE.
+Received B8:F2:55:00:EF:7E: Daikin.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+16 devices found. Watcher status: <BluetoothLEAdvertisementWatcherStatus.STOPPED: 3>.
+Received 44:1D:64:F4:AC:D2: ESP32-RGB-BLE.
+Connecting to BLE device @ 44:1D:64:F4:AC:D2
+getting services (service_cache_mode=None, cache_mode=None)...
+session_status_changed_event_handler: id: BluetoothLE#BluetoothLE58:ce:2a:d7:31:32-44:1d:64:f4:ac:d2, error: <BluetoothError.SUCCESS: 0>, status: <GattSessionStatus.ACTIVE: 1>
+max_pdu_size_changed_handler: 255
+44:1D:64:F4:AC:D2: services changed
+44:1D:64:F4:AC:D2: services changed
+[BLE] Connected: True
+[CAPTURE] Camera opened id=0, freq=100ms
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[STATE] END received but no active session -> IGNORE (duplicate)
+[BLE] Disconnected.
+[CAPTURE] Camera released
+Disconnecting from BLE device...
+[MAIN] Interrupted by user.

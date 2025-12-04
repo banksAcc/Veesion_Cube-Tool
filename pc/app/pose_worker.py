@@ -500,12 +500,15 @@ class PoseWorker:
                 },
                 None,
             )
-        except Exception:
+        except Exception as e:  # <--- Assegna l'errore alla variabile 'e'
+            # (Opzionale) Stampa l'errore in console per debug immediato
+            print(f"Errore in pose_fail: {e}") 
+            
             return (
                 {
                     "file": packet.filename,
                     "ok": False,
-                    "reason": "pose_fail",
+                    "reason": f"pose_fail: {str(e)}", # <--- Aggiungi il messaggio di errore qui
                 },
                 None,
             )
