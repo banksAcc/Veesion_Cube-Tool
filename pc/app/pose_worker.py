@@ -10,11 +10,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
-import vendor_cube_minimal  # ensures cube_minimal is importable from the repo checkout
-
-from cube_minimal.cube_pose.api import estimate_cube_from_image
-from cube_minimal.cube_pose.filtering.marker_filter import MarkerFilter
-from cube_minimal.ico_pose import estimate_truncated_ico_from_image
+from  algo.api import estimate_cube_from_image, estimate_truncated_ico_from_image
+from algo.marker_filter import MarkerFilter
 
 from config_models import AppConfig, CubePoseConfig, IcoPoseConfig
 from logger import get_logger
