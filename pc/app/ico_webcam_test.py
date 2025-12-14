@@ -26,7 +26,7 @@ ICO_RADIUS_METERS = 0.05678     # Raggio dal centro del solido alla faccia (11 c
 # Tuning Algoritmo
 MIN_MARKER_AREA_PX = 300.0   # Scarta marker più piccoli di questi pixel
 WEIGHT_EXPONENT = 2.3        # 2.0 = Quadratico (privilegia marker grandi)
-OUTLIER_THRESHOLD = 0.13     # 8 cm: distanza massima dalla media per essere valido
+OUTLIER_THRESHOLD = 0.17     # 8 cm: distanza massima dalla media per essere valido
 
 # Camera
 CAMERA_ID_OVERRIDE = None    # Se None, usa quello nel config.yaml

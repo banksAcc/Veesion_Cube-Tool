@@ -10,10 +10,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
-from  algo.api import estimate_cube_from_image, estimate_truncated_ico_from_image
-from algo.marker_filter import MarkerFilter
+# Importa le funzioni di caricamento e l'API di stima
+from algo import (
+    estimate_truncated_ico_from_image,
+    load_camera_calibration,
+    load_ico_transforms
+)
 
-from config_models import AppConfig, CubePoseConfig, IcoPoseConfig
+from config_models import AppConfig, IcoPoseConfig
 from logger import get_logger
 from messages import (
     BLE_COMPUTATION_END,
@@ -42,7 +46,6 @@ log = get_logger("POSE")
 @dataclass
 class SessionJob:
     """Track state for an in-flight pose estimation session."""
-
     key: str
     frame_queue: asyncio.Queue[Optional[FramePacket]]
     freq_ms: int
@@ -55,12 +58,11 @@ class SessionJob:
     end_iso: Optional[str] = None
     finished: asyncio.Event = field(default_factory=asyncio.Event)
     task: Optional[asyncio.Task] = None
-    marker_filter: Optional[MarkerFilter] = None
     overlay_paths: List[Path] = field(default_factory=list)
 
 
 class PoseWorker:
-    """Asynchronous worker that estimates cube pose for capture sessions."""
+    """Asynchronous worker that estimates ico pose for capture sessions."""
 
     def __init__(
         self,
@@ -82,35 +84,16 @@ class PoseWorker:
 
         self.sessions: Dict[str, SessionJob] = {}
         self.method = cfg.pose.method.lower()
-        self.pose_cfg_cube: CubePoseConfig = cfg.pose.cube
         self.pose_cfg_ico = cfg.pose.ico
-        self.wand_offset = float(self.pose_cfg_cube.wand_offset_m)
-        self.wand_directions = dict(self.pose_cfg_cube.wand_directions)
         self.save_overlay = bool(cfg.pose.save_overlay)
         self.save_executor = ThreadPoolExecutor(max_workers=1)
 
-    @staticmethod
-    def _rotation_matrix_to_euler_zyz(R: "np.ndarray") -> Optional["np.ndarray"]:
-        if np is None:
-            return None
-        matrix = np.asarray(R, dtype=float)
-        if matrix.shape != (3, 3):
-            return None
-
-        sin_beta = float(np.sqrt(matrix[0, 2] ** 2 + matrix[1, 2] ** 2))
-        cos_beta = float(np.clip(matrix[2, 2], -1.0, 1.0))
-        singular = sin_beta < 1e-9
-
-        if not singular:
-            alpha = float(np.arctan2(matrix[0, 2], -matrix[1, 2]))
-            beta = float(np.arccos(cos_beta))
-            gamma = float(np.arctan2(matrix[2, 0], matrix[2, 1]))
-        else:
-            beta = 0.0 if cos_beta > 0.0 else float(np.pi)
-            alpha = float(np.arctan2(matrix[1, 0], matrix[0, 0]))
-            gamma = 0.0
-
-        return np.array([alpha, beta, gamma], dtype=float)
+        # Cache per evitare di ricaricare file a ogni frame
+        self._cached_calib_path: Optional[str] = None
+        self._K: Optional[np.ndarray] = None
+        self._dist: Optional[np.ndarray] = None
+        self._cached_trans_path: Optional[str] = None
+        self._transforms: Optional[dict] = None
 
     async def start(self) -> None:
         """Spawn worker tasks if pose estimation is enabled."""
@@ -183,7 +166,6 @@ class PoseWorker:
             save_frames=save_frames,
             save_dir=save_dir,
             save_overlay=self.save_overlay,
-            marker_filter=self._create_marker_filter(),
         )
         job.task = asyncio.create_task(self._run_session(job))
         self.sessions[session_key] = job
@@ -283,13 +265,13 @@ class PoseWorker:
                         log.warning(
                             f"cv2.imwrite returned False for {overlay_path.name}"
                         )
-            except Exception as exc:  # pragma: no cover - depends on cv2 backend
+            except Exception as exc:
                 log.warning(f"Failed to write frame {path.name}: {exc}")
                 return
 
         try:
             await loop.run_in_executor(self.save_executor, _write)
-        except Exception as exc:  # pragma: no cover - executor errors are rare
+        except Exception as exc:
             log.warning(f"Failed to persist frame {path.name}: {exc}")
 
     def _derive_overlay_path(
@@ -330,310 +312,120 @@ class PoseWorker:
     def _process_frame_packet(
         self, job: SessionJob, packet: FramePacket
     ) -> Tuple[dict[str, Any], Optional["np.ndarray"]]:
-        if self.method == "cube" and HAS_CV and hasattr(cv2, "aruco"):
-            return self._process_cube_frame(job, packet)
         if self.method == "ico" and HAS_CV and hasattr(cv2, "aruco"):
             return self._process_ico_frame(job, packet)
-        if self.method == "custom":
-            return (
-                {
-                    "file": packet.filename,
-                    "ok": False,
-                    "reason": "custom_not_implemented",
-                },
-                None,
-            )
+        
         return (
             {
                 "file": packet.filename,
                 "ok": False,
-                "reason": "missing_opencv_contrib_or_invalid_method",
+                "reason": f"invalid_method_{self.method}",
             },
             None,
         )
 
-    def _create_marker_filter(self) -> MarkerFilter:
-        if self.method == "ico":
-            cfg = self.pose_cfg_ico.marker_filter
-        else:
-            cfg = self.pose_cfg_cube.marker_filter
-        active = bool(cfg.active_marker_filter)
-        try_adjust = bool(cfg.try_adj_marker)
-        threshold = float(cfg.area_threshold_px or 0.0)
-        min_flip = float(cfg.min_flip_interval_s or 0.0)
-        return MarkerFilter(
-            active=active,
-            try_adjust=try_adjust,
-            area_threshold_px=threshold,
-            min_flip_interval_s=min_flip,
-        )
-
-    def _process_cube_frame(
-        self, job: SessionJob, packet: FramePacket
-    ) -> Tuple[dict[str, Any], Optional["np.ndarray"]]:
-        pose_cfg = self.pose_cfg_cube
-        dict_name = pose_cfg.dictionary
-        marker_size = float(pose_cfg.marker_size_mm) / 1000.0
-        cube_size = float(pose_cfg.cube_size_mm) / 1000.0
-        pair_strategy = pose_cfg.pair_strategy
-
-        calib_path = self.cfg.pose.camera_calibration_npz
-        if not calib_path:
-            return (
-                {
-                    "file": packet.filename,
-                    "ok": False,
-                    "reason": "no_calibration",
-                },
-                None,
-            )
-
-        try:
-            result = estimate_cube_from_image(
-                packet.frame,
-                str(calib_path),
-                dict_name,
-                marker_size,
-                cube_size,
-                pair_strategy=pair_strategy,
-                return_overlay=True,
-                marker_filter=job.marker_filter,
-                timestamp=packet.timestamp,
-            )
-        except ValueError:
-            return (
-                {
-                    "file": packet.filename,
-                    "ok": False,
-                    "reason": "no_markers",
-                },
-                None,
-            )
-        except Exception:
-            return (
-                {
-                    "file": packet.filename,
-                    "ok": False,
-                    "reason": "pose_fail",
-                },
-                None,
-            )
-
-        overlay = result.get("overlay")
-
-        frame_entry: dict[str, Any] = {
-            "file": packet.filename,
-            "ok": True,
-            "rvec": [float(x) for x in np.asarray(result["rvec"]).flatten()],
-            "tvec": [float(x) for x in np.asarray(result["tvec"]).flatten()],
-            "reproj_err": None,
-            "num_markers": int(result.get("num_markers", 0)),
-        }
-
-        filter_info = result.get("marker_filter") or {}
-        if filter_info.get("discarded_ids") or filter_info.get("corrected_ids"):
-            frame_entry["marker_filter"] = filter_info
-
-        frame_entry["timestamp"] = packet.iso_timestamp
-
-        wand_tip = self._compute_wand_tip(result)
-        if wand_tip is not None:
-            tip_pos, wand_dir = wand_tip
-            frame_entry["tvec_tip"] = [float(x) for x in tip_pos]
-            frame_entry["wand_direction"] = [float(x) for x in wand_dir]
-
-            tip_rot = self._compute_tip_rotation(result, wand_dir)
-            if tip_rot is not None:
-                euler = self._rotation_matrix_to_euler_zyz(tip_rot)
-                if euler is not None:
-                    frame_entry["euler_tip"] = [float(x) for x in euler]
-                    frame_entry["tip_pose"] = [
-                        float(tip_pos[0]),
-                        float(tip_pos[1]),
-                        float(tip_pos[2]),
-                        float(euler[0]),
-                        float(euler[1]),
-                        float(euler[2]),
-                    ]
-
-        return frame_entry, overlay
-
     def _process_ico_frame(
         self, job: SessionJob, packet: FramePacket
     ) -> Tuple[dict[str, Any], Optional["np.ndarray"]]:
+        
         pose_cfg = self.pose_cfg_ico
         dict_name = pose_cfg.dictionary
-        marker_size = float(pose_cfg.marker_size_mm) / 1000.0
+        # Conversione mm -> metri
+        marker_size = float(pose_cfg.marker_size_mm) / 1000.0 
+        
+        # Percorsi file
         transform_path = pose_cfg.transform_file
-
         calib_path = self.cfg.pose.camera_calibration_npz
+
         if not calib_path:
             return (
-                {
-                    "file": packet.filename,
-                    "ok": False,
-                    "reason": "no_calibration",
-                },
+                {"file": packet.filename, "ok": False, "reason": "no_calibration"},
                 None,
             )
 
+        # --- 1. CARICAMENTO E CACHING RISORSE (K, Dist, Transforms) ---
+        # A. Calibrazione Camera
+        if self._cached_calib_path != str(calib_path):
+            try:
+                self._K, self._dist = load_camera_calibration(str(calib_path))
+                self._cached_calib_path = str(calib_path)
+            except Exception as e:
+                return ({"file": packet.filename, "ok": False, "reason": f"calib_load_err: {e}"}, None)
+
+        # B. Trasformazioni Faccia->Corpo (con SCALING)
+        if self._cached_trans_path != str(transform_path):
+            try:
+                raw_transforms = load_ico_transforms(str(transform_path))
+                
+                # Applichiamo qui la scala del raggio reale.
+                # Cerchiamo radius_m nel config, altrimenti default 0.11
+                ico_radius = getattr(pose_cfg, 'radius_m', 0.11) 
+                
+                scaled_transforms = {}
+                for key, T in raw_transforms.items():
+                    T_real = T.copy()
+                    # Scaliamo la traslazione (ultime 3 righe, 4a colonna)
+                    T_real[:3, 3] *= ico_radius
+                    scaled_transforms[key] = T_real
+                
+                self._transforms = scaled_transforms
+                self._cached_trans_path = str(transform_path)
+            except Exception as e:
+                 return ({"file": packet.filename, "ok": False, "reason": f"trans_load_err: {e}"}, None)
+
+        # --- 2. STIMA POSA ---
         try:
             result = estimate_truncated_ico_from_image(
-                packet.frame,
-                str(calib_path),
-                dict_name,
-                marker_size,
-                transform_path=transform_path,
+                image=packet.frame,
+                K=self._K,
+                dist=self._dist,
+                transforms=self._transforms,
+                aruco_dict=dict_name,
+                marker_size=marker_size,
+                
+                # Parametri Tuning Stabilità (Override dei default per robustezza)
+                min_marker_area_px=250.0,
+                weight_exponent=2.1,         # Consigliato 2.0 per stabilità
+                outlier_distance_threshold=0.17, # 8cm tolleranza
+                
                 return_overlay=True,
-                marker_filter=job.marker_filter,
                 timestamp=packet.timestamp,
             )
+            
         except ValueError:
             return (
-                {
-                    "file": packet.filename,
-                    "ok": False,
-                    "reason": "no_markers",
-                },
+                {"file": packet.filename, "ok": False, "reason": "no_markers"},
                 None,
             )
-        except Exception as e:  # <--- Assegna l'errore alla variabile 'e'
-            # (Opzionale) Stampa l'errore in console per debug immediato
-            print(f"Errore in pose_fail: {e}") 
-            
+        except Exception as e:
+            # Stampa errore per debug e ritorna stato fallito
+            print(f"Errore critico in pose_fail: {e}") 
             return (
-                {
-                    "file": packet.filename,
-                    "ok": False,
-                    "reason": f"pose_fail: {str(e)}", # <--- Aggiungi il messaggio di errore qui
-                },
+                {"file": packet.filename, "ok": False, "reason": f"pose_fail: {str(e)}"},
                 None,
             )
 
+        # --- 3. FORMATTAZIONE OUTPUT ---
         overlay = result.get("overlay")
+
+        # Flattening sicuro per JSON
+        rvec_flat = result["rvec"].flatten().tolist()
+        tvec_flat = result["tvec"].flatten().tolist()
 
         frame_entry: dict[str, Any] = {
             "file": packet.filename,
             "ok": True,
-            "rvec": [float(x) for x in np.asarray(result["rvec"]).flatten()],
-            "tvec": [float(x) for x in np.asarray(result["tvec"]).flatten()],
+            "rvec": rvec_flat,
+            "tvec": tvec_flat,
             "reproj_err": None,
             "num_markers": int(result.get("num_markers", 0)),
+            "timestamp": packet.iso_timestamp,
         }
 
-        filter_info = result.get("marker_filter") or {}
-        if filter_info.get("discarded_ids") or filter_info.get("corrected_ids"):
-            frame_entry["marker_filter"] = filter_info
+        if "filter_debug" in result and result["filter_debug"]:
+            frame_entry["marker_filter"] = result["filter_debug"]
 
-        frame_entry["timestamp"] = packet.iso_timestamp
         return frame_entry, overlay
-
-
-    def _direction_from_spec(self, spec: Any) -> Optional["np.ndarray"]:
-        if np is None:
-            return None
-        if isinstance(spec, (list, tuple)):
-            vec = np.asarray(spec, dtype=float)
-            if vec.shape != (3,):
-                log.warning(f"Invalid wand direction vector length: {spec!r}")
-                return None
-            norm = float(np.linalg.norm(vec))
-            if norm < 1e-9:
-                return None
-            return vec / norm
-        if isinstance(spec, str):
-            token = spec.strip().upper()
-            if not token:
-                return None
-            sign = 1.0
-            if token[0] in {"+", "-"}:
-                sign = -1.0 if token[0] == "-" else 1.0
-                token = token[1:]
-            axis_map = {
-                "X": np.array([1.0, 0.0, 0.0], dtype=float),
-                "Y": np.array([0.0, 1.0, 0.0], dtype=float),
-                "Z": np.array([0.0, 0.0, 1.0], dtype=float),
-            }
-            base = axis_map.get(token)
-            if base is None:
-                log.warning(f"Unknown wand axis token: {spec!r}")
-                return None
-            return base * sign
-        log.warning(f"Unsupported wand direction spec: {spec!r}")
-        return None
-
-    def _compute_wand_tip(self, result: dict) -> Optional[Tuple["np.ndarray", "np.ndarray"]]:
-        if np is None or self.wand_offset == 0:
-            return None
-        markers = result.get("markers") or []
-        direction_vectors = []
-        for marker in markers:
-            marker_id = marker.get("id")
-            if marker_id not in self.wand_directions:
-                continue
-            local = self._direction_from_spec(self.wand_directions[marker_id])
-            if local is None:
-                continue
-            R_marker = np.asarray(marker.get("R"), dtype=float)
-            if R_marker.shape != (3, 3):
-                continue
-            direction_cam = R_marker @ local
-            norm = float(np.linalg.norm(direction_cam))
-            if norm < 1e-9:
-                continue
-            direction_vectors.append(direction_cam / norm)
-        if not direction_vectors:
-            return None
-        wand_dir = np.mean(direction_vectors, axis=0)
-        norm = float(np.linalg.norm(wand_dir))
-        if norm < 1e-9:
-            return None
-        wand_dir /= norm
-        tvec = np.asarray(result.get("tvec"), dtype=float).reshape(3,)
-        tip = tvec + wand_dir * float(self.wand_offset)
-        return tip, wand_dir
-
-    def _compute_tip_rotation(
-        self, result: dict, wand_dir: "np.ndarray"
-    ) -> Optional["np.ndarray"]:
-        if np is None:
-            return None
-        base_R = np.asarray(result.get("R"), dtype=float)
-        if base_R.shape != (3, 3):
-            return None
-
-        direction = np.asarray(wand_dir, dtype=float).reshape(3,)
-        norm = float(np.linalg.norm(direction))
-        if norm < 1e-9:
-            return None
-        z_axis = direction / norm
-
-        candidates = [base_R[:, i] for i in range(3)]
-        candidates.extend([np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])])
-
-        x_axis = None
-        for cand in candidates:
-            proj = cand - np.dot(cand, z_axis) * z_axis
-            proj_norm = float(np.linalg.norm(proj))
-            if proj_norm >= 1e-6:
-                x_axis = proj / proj_norm
-                break
-        if x_axis is None:
-            return None
-
-        y_axis = np.cross(z_axis, x_axis)
-        y_norm = float(np.linalg.norm(y_axis))
-        if y_norm < 1e-6:
-            return None
-        y_axis /= y_norm
-
-        x_axis = np.cross(y_axis, z_axis)
-        x_norm = float(np.linalg.norm(x_axis))
-        if x_norm < 1e-6:
-            return None
-        x_axis /= x_norm
-
-        return np.column_stack((x_axis, y_axis, z_axis))
 
     def _write_results(self, job: SessionJob) -> None:
         label = job.label
@@ -645,6 +437,7 @@ class PoseWorker:
         except Exception as exc:
             log.error(f"Failed to write pose results: {exc}")
 
+        # CSV semplificato per ICO (solo rvec/tvec base, niente tip/wand)
         out_csv = self.output_root / f"{label}_pose.csv"
         try:
             with out_csv.open("w", encoding="utf-8", newline="") as f:
@@ -654,28 +447,28 @@ class PoseWorker:
                         "frame_index",
                         "timestamp",
                         "ok",
-                        "tip_x",
-                        "tip_y",
-                        "tip_z",
-                        "tip_rz1",
-                        "tip_ry",
-                        "tip_rz2",
+                        "tx", "ty", "tz",
+                        "rx", "ry", "rz",
+                        "num_markers"
                     ]
                 )
                 for idx, frame in enumerate(job.results.get("frames", []), start=1):
-                    euler = frame.get("euler_tip") or [None, None, None]
-                    tip = frame.get("tvec_tip") or [None, None, None]
-                    tip_vals = ["" if v is None else f"{v:.9f}" for v in tip]
-                    euler_vals = ["" if v is None else f"{v:.9f}" for v in euler]
-                    writer.writerow(
-                        [
-                            idx,
-                            frame.get("timestamp", ""),
-                            frame.get("ok", False),
-                            *tip_vals,
-                            *euler_vals,
-                        ]
-                    )
+                    ok = frame.get("ok", False)
+                    tvec = frame.get("tvec", [None]*3)
+                    rvec = frame.get("rvec", [None]*3)
+                    num_mk = frame.get("num_markers", 0)
+
+                    t_vals = ["" if v is None else f"{v:.6f}" for v in tvec]
+                    r_vals = ["" if v is None else f"{v:.6f}" for v in rvec]
+                    
+                    writer.writerow([
+                        idx,
+                        frame.get("timestamp", ""),
+                        ok,
+                        *t_vals,
+                        *r_vals,
+                        num_mk
+                    ])
             log.info(f"Pose CSV written to {out_csv.name}")
         except Exception as exc:
             log.error(f"Failed to write pose CSV: {exc}")

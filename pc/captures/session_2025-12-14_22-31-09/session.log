@@ -1,0 +1,3 @@
+[SESSION] start @ 2025-12-14T22:31:09.834657 freq=100ms use_camera=True
+[SESSION] stop @ 2025-12-14T22:31:23.528890
+[CAPTURE] Timed out closing frame queue
