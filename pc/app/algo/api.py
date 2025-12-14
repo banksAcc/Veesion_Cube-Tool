@@ -1,14 +1,12 @@
 # pc/app/algo/api.py
-from typing import Dict, Any, Optional, Mapping
+from typing import Dict, Any, Optional, Mapping, List
 import numpy as np
 import cv2 as cv
 
-# Import relativi con il punto .
 from .detect import detect_markers
 from .pnp import estimate_marker_poses
-from .filter import MarkerFilter
 from .geometry import average_poses, quat_from_R
-from .viz import draw_sphere_overlay, draw_detected_markers # <--- AGGIUNTO draw_sphere_overlay
+from .viz import draw_sphere_overlay, draw_detected_markers
 
 # Mappa ID Marker -> ID Faccia
 DEFAULT_MARKER_MAP = {
@@ -26,86 +24,99 @@ def estimate_truncated_ico_from_image(
     transforms: Mapping[str, np.ndarray],
     aruco_dict: str,
     marker_size: float,
+    # --- Parametri di Tuning Stabilità ---
+    min_marker_area_px: float = 150.0,       # Soglia dimensione minima (step 2)
+    weight_exponent: float = 1,            # Esponente per peso area (step 4)
+    outlier_distance_threshold: float = 0, # Metri per scartare outlier (step 4)
+    # -------------------------------------
     return_overlay: bool = False,
-    marker_filter: Optional[MarkerFilter] = None,
-    timestamp: Optional[float] = None,
+    timestamp: Optional[float] = None,       # Mantenuto per compatibilità interfaccia, ma inutilizzato
     marker_map: Dict[int, str] = DEFAULT_MARKER_MAP
 ) -> Dict[str, Any]:
-    """
-    Stima la posa dell'icosaedro troncato.
-    NON esegue I/O su disco. Accetta solo matrici e immagini.
-    """
-    
+
+        
     # 1. Rilevamento 2D
     detections = detect_markers(image, aruco_dict)
-    if not detections:
-        raise ValueError("Nessun marker trovato.")
-
-    # 2. Stima Posa Marker (PnP)
-    poses = estimate_marker_poses(detections, K, dist, marker_size)
-
-    # 3. Filtraggio Temporale (Opzionale)
-    filter_stats = {}
-    if marker_filter:
-        detections, poses, stats = marker_filter.apply(detections, poses, timestamp)
-        filter_stats = {"discarded": stats.discarded, "corrected": stats.corrected}
     
-    if not poses:
-        raise ValueError("Tutti i marker sono stati filtrati/scartati.")
+    # --- 1b. Refinement Sub-Pixel ---
+    # Fondamentale per avere pose stabili. Affina i corner trovati.
+    if detections:
+        gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+        criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+        for det in detections:
+            cv.cornerSubPix(gray, det.corners, (5, 5), (-1, -1), criteria)
 
-    # 4. Calcolo Posa del Corpo (Body) dai singoli Marker
+    # 2. Filtro Area
+    # Scartiamo i marker troppo piccoli (rumorosi) PRIMA del PnP
+    valid_detections = [d for d in detections if d.area_px >= min_marker_area_px]
+    
+    if not valid_detections:
+        raise ValueError("Nessun marker valido trovato (filtro area o nessun rilevamento).")
+
+    # 3. Stima Posa Marker (PnP)
+    # NESSUNA logica anti-flip o filtri temporali qui. 
+    # Ci fidiamo del solver in pnp.py e della media robusta successiva.
+    poses = estimate_marker_poses(valid_detections, K, dist, marker_size)
+
+    if not poses:
+        raise ValueError("PnP fallito su tutti i marker.")
+
+    # 4. Calcolo Posa del Corpo e Raccolta Pesi
     body_poses_candidates = []
+    weights = []
     valid_marker_info = []
 
-    for det, m_pose in zip(detections, poses):
+    for det, m_pose in zip(valid_detections, poses):
         face_id = marker_map.get(det.id)
         if face_id and face_id in transforms:
-            # T_face_to_body: Trasformazione che porta dalla faccia al centro del corpo
-            # La carichiamo dal JSON esterno
             T_face_body = transforms[face_id]
             
-            # Costruiamo matrice 4x4 del marker rispetto alla camera
+            # Posa del Marker rispetto alla Camera
             T_cam_marker = np.eye(4)
             T_cam_marker[:3, :3] = m_pose.R
             T_cam_marker[:3, 3] = m_pose.tvec.flatten()
             
-            # Posa del corpo rispetto alla camera: T_cam_body = T_cam_marker * T_face_body
+            # Posa del Corpo: T_cam_body = T_cam_marker * T_face_body
             T_cam_body = T_cam_marker @ T_face_body
             
             body_poses_candidates.append(T_cam_body)
+            
+            # Peso base = Area in pixel
+            weights.append(det.area_px) 
             
             valid_marker_info.append({
                 "id": det.id,
                 "face": face_id,
                 "rvec": m_pose.rvec.flatten().tolist(),
-                "tvec": m_pose.tvec.flatten().tolist()
+                "tvec": m_pose.tvec.flatten().tolist(),
+                "area_px": det.area_px 
             })
 
     if not body_poses_candidates:
         raise ValueError("Nessun marker rilevato corrisponde a facce note nel JSON.")
 
-    # 5. Media delle pose candidate
-    T_final = average_poses(body_poses_candidates)
+    # 5. Media PESATA ROBUSTA
+    # Usa la nuova funzione in geometry.py che supporta pesi esponenziali e rimozione outlier
+    T_final = average_poses(
+        body_poses_candidates, 
+        weights=weights,
+        weight_exponent=weight_exponent,
+        outlier_distance_threshold=outlier_distance_threshold
+    )
     
     R_final = T_final[:3, :3]
     t_final = T_final[:3, 3]
     rvec_final, _ = cv.Rodrigues(R_final)
     quat_final = quat_from_R(R_final)
 
-    # 6. Overlay (Aggiornato con Sfera)
+    # 6. Overlay
     overlay_img = None
     if return_overlay:
-        # A. Disegna i marker singoli per debug
-        debug_img = draw_detected_markers(image, detections, poses, K, dist, marker_size/2)
+        # Disegna i box e gli ID dei marker usati
+        debug_img = draw_detected_markers(image, valid_detections, poses, K, dist, marker_size/2)
         
-        # B. Disegna la SFERA ROSSA TRASPARENTE
-        # RAGGIO SFERA: Qui devi decidere quanto è grande la sfera reale.
-        # L'icosaedro troncato circoscrive una sfera. 
-        # Se marker_size è il lato del quadrato nero, il raggio dell'oggetto intero è circa:
-        # Raggio approx ≈ 3.5 * marker_size (dipende dalla tua costruzione fisica precisa)
-        # Puoi parametrizzarlo o stimarlo qui:
-        sphere_radius = 0.057 # Esempio: aggiusta questo valore in base al tuo oggetto reale!
-        
+        # Disegna la Sfera Rossa (Posa Finale calcolata)
+        sphere_radius = 0.057 # Raggio stimato sfera (da aggiustare sul tuo oggetto reale)
         overlay_img = draw_sphere_overlay(
             img=debug_img, 
             K=K, 
@@ -114,15 +125,14 @@ def estimate_truncated_ico_from_image(
             tvec=t_final, 
             radius=sphere_radius,
             color=(0, 0, 255), # Rosso
-            alpha=0.2          # Trasparenza richiesta
+            alpha=0.2          # Trasparenza
         )
 
-        # C. Testo Info
+        # Info a schermo
         dist_cm = np.linalg.norm(t_final) * 100
-        label = f"Dist: {dist_cm:.1f}cm | Mkrs: {len(body_poses_candidates)}"
-        # Aggiungiamo il testo sopra la sfera
-        cx, cy = int(image.shape[1]/2), 30
+        label = f"Dist: {dist_cm:.1f}cm | Mkrs: {len(body_poses_candidates)} | Exp: {weight_exponent}"
         cv.putText(overlay_img, label, (20, 50), cv.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
 
     return {
         "rvec": rvec_final,
@@ -132,5 +142,6 @@ def estimate_truncated_ico_from_image(
         "num_markers": len(body_poses_candidates),
         "markers": valid_marker_info,
         "overlay": overlay_img,
-        "filter_debug": filter_stats
+        # filter_debug vuoto perché abbiamo rimosso il filtro temporale
+        "filter_debug": {} 
     }

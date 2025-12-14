@@ -33,7 +33,9 @@ def detect_markers(img_bgr: np.ndarray, dict_name: str) -> List[MarkerDetection]
     detections = []
     if ids is not None:
         ids_flat = ids.flatten()
+        criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         for i, marker_id in enumerate(ids_flat):
+            cv.cornerSubPix(gray, corners[i], (5, 5), (-1, -1), criteria)
             c = corners[i].reshape(4, 2).astype(np.float32)
             # Calcolo area approssimativa (prodotto vettoriale)
             area = 0.5 * np.abs(np.dot(c[:, 0], np.roll(c[:, 1], 1)) - np.dot(c[:, 1], np.roll(c[:, 0], 1)))

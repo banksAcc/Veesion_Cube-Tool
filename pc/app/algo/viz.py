@@ -102,10 +102,38 @@ def draw_sphere_overlay(img: np.ndarray, K: np.ndarray, dist: np.ndarray,
     return output
 
 def draw_detected_markers(img: np.ndarray, detections, poses, K, dist, size):
-    """Disegna contorni dei marker grezzi rilevati."""
+    """
+    Disegna contorni, assi e INFO AREA dei marker rilevati.
+    """
+    out = img.copy()  
+    return out
+
+def draw_detected_markers_1(img: np.ndarray, detections, poses, K, dist, size):
+    """
+    Disegna contorni, assi e INFO AREA dei marker rilevati.
+    """
     out = img.copy()
     for det, pose in zip(detections, poses):
+        # 1. Disegna contorno quadrato
         pts = det.corners.reshape((-1, 1, 2)).astype(np.int32)
         cv.polylines(out, [pts], True, (0, 255, 255), 2)
-        cv.drawFrameAxes(out, K, dist, pose.rvec, pose.tvec, size, 1)
+        
+        # 2. Disegna gli assi cartesiani locali
+        cv.drawFrameAxes(out, K, dist, pose.rvec, pose.tvec, size, 2)
+        
+        # 3. Scrivi ID e AREA (px) vicino al primo angolo
+        # Prende l'angolo in alto a sinistra del marker
+        c = det.corners[0]
+        x, y = int(c[0]), int(c[1])
+        
+        # Testo: "ID: 5 | px: 1200"
+        label = f"ID:{det.id} px:{int(det.area_px)}"
+        
+        # Sfondo nero per il testo (per leggibilità)
+        (w, h), _ = cv.getTextSize(label, cv.FONT_HERSHEY_PLAIN, 1.2, 1)
+        cv.rectangle(out, (x, y - h - 5), (x + w, y + 5), (0, 0, 0), -1)
+        
+        # Scritta bianca
+        cv.putText(out, label, (x, y), cv.FONT_HERSHEY_PLAIN, 1.2, (255, 255, 255), 1, cv.LINE_AA)
+        
     return out
