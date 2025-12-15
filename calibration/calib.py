@@ -4,24 +4,23 @@ import cv2.aruco as aruco
 import glob
 import os
 
+cv2.setNumThreads(0)          # usa tutti i core disponibili
+cv2.setUseOptimized(True)     # abilita ottimizzazioni interne
+
 def calibrate_charuco():
     # --- 1. CONFIGURAZIONE PARAMETRI ---
-    # Percorso delle immagini
     IMAGES_DIR = 'img'
-    EXTENSION = '*.jpg' # Modifica in *.png se le tue immagini sono png
+    EXTENSION = '*.tiff' # O *.png
 
-    # Parametri della ChArUco Board (come da tua specifica)
-    SQUARES_X = 9           # Numero di quadrati sull'asse X
-    SQUARES_Y = 12          # Numero di quadrati sull'asse Y
-    SQUARE_LENGTH = 0.030   # 30 mm in metri
-    MARKER_LENGTH = 0.022   # 22 mm in metri
+    # Parametri della ChArUco Board
+    SQUARES_X = 12
+    SQUARES_Y = 9
+    SQUARE_LENGTH = 0.030
+    MARKER_LENGTH = 0.022
     
-    # Dizionario ArUco specificato
     ARUCO_DICT = aruco.getPredefinedDictionary(aruco.DICT_5X5_50)
 
     # Creazione della board
-    # Nota: La sintassi può variare leggermente a seconda della versione di OpenCV.
-    # Questa è per le versioni recenti (4.x).
     board = aruco.CharucoBoard(
         (SQUARES_X, SQUARES_Y), 
         SQUARE_LENGTH, 
@@ -29,70 +28,99 @@ def calibrate_charuco():
         ARUCO_DICT
     )
     
-    # Per visualizzare i detection, crea il detector parameters
-    params = aruco.DetectorParameters()
-
-    # --- 2. CARICAMENTO IMMAGINI E RILEVAMENTO ---
+    # --- CORREZIONE PRINCIPALE PER OPENCV >= 4.7.0 ---
+    # --- Detector ArUco (più trasparente per debug rispetto a CharucoDetector.detectBoard) ---
+    detector_params = aruco.DetectorParameters()
+    try:
+        aruco_detector = aruco.ArucoDetector(ARUCO_DICT, detector_params)  # OpenCV >= 4.7
+    except AttributeError:
+        aruco_detector = None  # fallback: useremo aruco.detectMarkers
+    # ------------------------------------------------------------------------
+# --- 2. CARICAMENTO IMMAGINI E RILEVAMENTO ---
     print(f"Ricerca immagini in: {os.path.join(IMAGES_DIR, EXTENSION)}")
     images = glob.glob(os.path.join(IMAGES_DIR, EXTENSION))
     
     if len(images) < 10:
-        print("ERRORE: Trovate troppe poche immagini. Assicurati che il percorso sia corretto.")
-        return
+        print(f"Trovate {len(images)} immagini. ATTENZIONE: Poche immagini.")
+        if len(images) == 0:
+            return
 
     print(f"Trovate {len(images)} immagini. Inizio elaborazione...")
 
-    all_charuco_corners = []  # Angoli rilevati in tutte le immagini
-    all_charuco_ids = []      # ID rilevati in tutte le immagini
-    image_size = None         # Dimensione dell'immagine (deve essere uguale per tutte)
+    all_charuco_corners = []
+    all_charuco_ids = []
+    image_size = None
 
     valid_images = 0
 
     for image_file in images:
-        img = cv2.imread(image_file)
+        # Leggi TIFF/PNG/JPG in modo robusto (supporta 8/16 bit e grayscale)
+        img = cv2.imread(image_file, cv2.IMREAD_UNCHANGED)
         if img is None:
+            print(f"⚠️ Immagine non valida: {image_file}")
             continue
 
-        # Converti in scala di grigi
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # Imposta image_size alla prima iterazione
-        if image_size is None:
-            image_size = gray.shape[::-1]
-
-        # Rileva i marker ArUco grezzi
-        corners, ids, rejected = aruco.detectMarkers(gray, ARUCO_DICT, parameters=params)
-
-        # Se sono stati trovati marker sufficienti, raffina per trovare gli angoli ChArUco
-        if len(corners) > 0:
-            # Interpola gli angoli della scacchiera basandosi sui marker trovati
-            response, charuco_corners, charuco_ids = aruco.interpolateCornersCharuco(
-                markerCorners=corners,
-                markerIds=ids,
-                image=gray,
-                board=board
-            )
-
-            # Se la risposta è positiva e ci sono abbastanza angoli (es. > 4)
-            if response > 0 and charuco_corners is not None and len(charuco_corners) > 4:
-                all_charuco_corners.append(charuco_corners)
-                all_charuco_ids.append(charuco_ids)
-                valid_images += 1
-                # print(f"Ok: {image_file} - Angoli trovati: {len(charuco_corners)}")
-            else:
-                print(f"Scartata (pochi angoli ChArUco): {image_file}")
+        # Gestione canali: (H,W) / (H,W,1) / BGR / BGRA
+        if img.ndim == 2:
+            gray = img
+        elif img.ndim == 3 and img.shape[2] == 1:
+            gray = img[:, :, 0]
+        elif img.ndim == 3 and img.shape[2] == 3:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        elif img.ndim == 3 and img.shape[2] == 4:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGRA2GRAY)
         else:
-            print(f"Scartata (nessun marker): {image_file}")
+            print(f"⚠️ Formato immagine non supportato: shape={img.shape} file={image_file}")
+            continue
 
-    print(f"\n--- RILEVAMENTO COMPLETATO ---")
+        # Normalizza a uint8 se necessario (molti TIFF sono uint16)
+        if gray.dtype != np.uint8:
+            gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+        if image_size is None:
+            image_size = (gray.shape[1], gray.shape[0])  # (width, height)
+
+        # 1) Detect marker ArUco
+        if aruco_detector is not None:
+            marker_corners, marker_ids, rejected = aruco_detector.detectMarkers(gray)
+        else:
+            marker_corners, marker_ids, rejected = aruco.detectMarkers(gray, ARUCO_DICT, parameters=detector_params)
+
+        print("marker_ids:", None if marker_ids is None else len(marker_ids))
+
+        if marker_ids is None or len(marker_ids) == 0:
+            print(f"❌ Nessun marker ArUco trovato in: {image_file}")
+            continue
+
+        # 2) Interpola corner ChArUco
+        retval, charuco_corners, charuco_ids = aruco.interpolateCornersCharuco(
+            marker_corners, marker_ids, gray, board
+        )
+
+        # Alcune versioni possono restituire retval=None; gestiamolo
+        retval_val = 0 if retval is None else int(retval)
+        print("interpolate retval:", retval_val)
+        print("charuco:", None if charuco_corners is None else len(charuco_corners))
+
+        # Soglia "chiave" (presa dal tuo esempio): almeno 20 corner ChArUco
+        if charuco_corners is not None and retval_val > 20:
+            all_charuco_corners.append(charuco_corners)
+            all_charuco_ids.append(charuco_ids)
+            valid_images += 1
+            print(f"✅ Rilevata board valida in: {image_file}")
+        else:
+            print(f"❌ Board non sufficientemente visibile in: {image_file}")
+
+    print(f"--- RILEVAMENTO COMPLETATO ---")
     print(f"Immagini valide per la calibrazione: {valid_images}/{len(images)}")
 
     if valid_images < 10:
-        print("Troppe poche immagini valide per una buona calibrazione.")
-        return
+        print("ATTENZIONE: Meno di 10 immagini valide. La calibrazione potrebbe essere imprecisa.")
+        if valid_images == 0:
+            return
 
     # --- 3. CALIBRAZIONE DELLA CAMERA ---
-    print("Esecuzione calibrazione (potrebbe richiedere tempo)...")
+    print("Esecuzione calibrazione...")
     
     try:
         ret, camera_matrix, dist_coeffs, rvecs, tvecs = aruco.calibrateCameraCharuco(
@@ -108,7 +136,6 @@ def calibrate_charuco():
         print("Camera Matrix:\n", camera_matrix)
         print("Distortion Coefficients:\n", dist_coeffs)
 
-        # --- 4. SALVATAGGIO ---
         output_filename = "calibration_data.npz"
         np.savez(
             output_filename, 

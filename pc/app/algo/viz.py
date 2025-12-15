@@ -101,14 +101,14 @@ def draw_sphere_overlay(img: np.ndarray, K: np.ndarray, dist: np.ndarray,
 
     return output
 
-def draw_detected_markers(img: np.ndarray, detections, poses, K, dist, size):
+def draw_detected_markers_1(img: np.ndarray, detections, poses, K, dist, size):
     """
     Disegna contorni, assi e INFO AREA dei marker rilevati.
     """
     out = img.copy()  
     return out
 
-def draw_detected_markers_1(img: np.ndarray, detections, poses, K, dist, size):
+def draw_detected_markers(img: np.ndarray, detections, poses, K, dist, size):
     """
     Disegna contorni, assi e INFO AREA dei marker rilevati.
     """
@@ -127,13 +127,15 @@ def draw_detected_markers_1(img: np.ndarray, detections, poses, K, dist, size):
         x, y = int(c[0]), int(c[1])
         
         # Testo: "ID: 5 | px: 1200"
-        label = f"ID:{det.id} px:{int(det.area_px)}"
+        #label = f"ID:{det.id} px:{int(det.area_px)}"
         
         # Sfondo nero per il testo (per leggibilità)
-        (w, h), _ = cv.getTextSize(label, cv.FONT_HERSHEY_PLAIN, 1.2, 1)
-        cv.rectangle(out, (x, y - h - 5), (x + w, y + 5), (0, 0, 0), -1)
+        #(w, h), _ = cv.getTextSize(label, cv.FONT_HERSHEY_PLAIN, 1.2, 1)
+        #cv.rectangle(out, (x, y - h - 5), (x + w, y + 5), (0, 0, 0), -1)
+        cv.rectangle(out, (x, y -5 ), (x , y + 5), (0, 0, 0), -1)
+
         
         # Scritta bianca
-        cv.putText(out, label, (x, y), cv.FONT_HERSHEY_PLAIN, 1.2, (255, 255, 255), 1, cv.LINE_AA)
-        
+        #cv.putText(out, label, (x, y), cv.FONT_HERSHEY_PLAIN, 1.2, (255, 255, 255), 1, cv.LINE_AA)
+
     return out
