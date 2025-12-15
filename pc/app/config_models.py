@@ -190,11 +190,15 @@ class PoseConfig:
     ico: IcoPoseConfig = field(default_factory=IcoPoseConfig)
     camera_calibration_npz: Optional[Path] = None
     save_overlay: bool = True
+    # AGGIUNGI QUESTO:
+    extrinsic_matrix_json: Optional[Path] = None
 
     @classmethod
     def from_mapping(cls, raw: Any) -> "PoseConfig":
         data = _as_mapping(raw)
         calibration = data.get("camera_calibration_npz")
+        # AGGIUNGI QUESTO:
+        extrinsics = data.get("extrinsic_matrix_json")
         return cls(
             enabled=_coerce_bool(data.get("enabled"), cls.enabled),
             method=str(data.get("method", cls.method)),
@@ -205,6 +209,8 @@ class PoseConfig:
             ico=IcoPoseConfig.from_mapping(data.get("ico", {})),
             camera_calibration_npz=Path(calibration) if calibration else None,
             save_overlay=_coerce_bool(data.get("save_overlay"), cls.save_overlay),
+            # AGGIUNGI QUESTO:
+            extrinsic_matrix_json=Path(extrinsics) if extrinsics else None,
         )
 
 

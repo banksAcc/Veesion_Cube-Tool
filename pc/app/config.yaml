@@ -26,6 +26,9 @@ pose:
     transform_file: algo/transforms_face_to_body.json          # leave null to use built-in transforms
   camera_calibration_npz: "../calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
 
+  # NUOVO PARAMETRO: File contenente la matrice 4x4 T_base_camera
+  extrinsic_matrix_json: "../calib/robot_camera_extrinsics.json"
+
 runtime:
   debug: true                      # extra debug behavior
   log_level: INFO                 # DEBUG, INFO, WARNING, ERROR

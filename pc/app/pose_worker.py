@@ -9,6 +9,31 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+import numpy as np
+import cv2
+
+def load_extrinsic_matrix(path: str) -> np.ndarray:
+    """Carica una matrice 4x4 da un JSON (lista di liste)."""
+    with open(path, 'r') as f:
+        data = json.load(f)
+    matrix = np.array(data, dtype=np.float64)
+    if matrix.shape != (4, 4):
+        raise ValueError("La matrice estrinseca deve essere 4x4")
+    return matrix
+
+def to_matrix(rvec, tvec):
+    """Converte rvec/tvec in matrice omogenea 4x4."""
+    R, _ = cv2.Rodrigues(rvec)
+    T = np.eye(4)
+    T[:3, :3] = R
+    T[:3, 3] = tvec.flatten()
+    return T
+
+def from_matrix(T):
+    """Estrae rvec e tvec da una matrice 4x4."""
+    rvec, _ = cv2.Rodrigues(T[:3, :3])
+    tvec = T[:3, 3]
+    return rvec.flatten(), tvec.flatten()
 
 # Importa le funzioni di caricamento e l'API di stima
 from algo import (
@@ -69,6 +94,7 @@ class PoseWorker:
         cfg: AppConfig,
         output_root: Path,
         ble_queue: asyncio.Queue[Optional[BleMessage]],
+        
     ):
         self.cfg = cfg
         self.output_root = output_root
@@ -94,6 +120,9 @@ class PoseWorker:
         self._dist: Optional[np.ndarray] = None
         self._cached_trans_path: Optional[str] = None
         self._transforms: Optional[dict] = None
+        
+        self._cached_extrin_path: Optional[str] = None
+        self._T_base_cam: Optional[np.ndarray] = None
 
     async def start(self) -> None:
         """Spawn worker tasks if pose estimation is enabled."""
@@ -404,6 +433,31 @@ class PoseWorker:
                 {"file": packet.filename, "ok": False, "reason": f"pose_fail: {str(e)}"},
                 None,
             )
+    
+        # --- NUOVA SEZIONE: 2.5 CALIBRAZIONE ESTRINSECA (CAMERA -> ROBOT) ---
+        extrin_path = self.cfg.pose.extrinsic_matrix_json
+        rvec_base, tvec_base = None, None
+
+        if extrin_path:
+            # Caricamento Lazy della matrice
+            if self._cached_extrin_path != str(extrin_path):
+                try:
+                    self._T_base_cam = load_extrinsic_matrix(str(extrin_path))
+                    self._cached_extrin_path = str(extrin_path)
+                except Exception as e:
+                    log.error(f"Impossibile caricare estrinseci: {e}")
+
+            # Calcolo trasformazione
+            if self._T_base_cam is not None:
+                # 1. Posa oggetto rispetto alla camera
+                T_cam_target = to_matrix(result["rvec"], result["tvec"])
+                
+                # 2. Posa oggetto rispetto alla base del robot
+                # T_base_target = T_base_cam * T_cam_target
+                T_base_target = self._T_base_cam @ T_cam_target
+                
+                # 3. Conversione inversa per output
+                rvec_base, tvec_base = from_matrix(T_base_target)
 
         # --- 3. FORMATTAZIONE OUTPUT ---
         overlay = result.get("overlay")
@@ -417,6 +471,10 @@ class PoseWorker:
             "ok": True,
             "rvec": rvec_flat,
             "tvec": tvec_flat,
+            # NUOVI Dati Robot-Relativi
+            "rvec_robot": rvec_base.tolist() if rvec_base is not None else None,
+            "tvec_robot": tvec_base.tolist() if tvec_base is not None else None,
+            
             "reproj_err": None,
             "num_markers": int(result.get("num_markers", 0)),
             "timestamp": packet.iso_timestamp,
@@ -442,16 +500,12 @@ class PoseWorker:
         try:
             with out_csv.open("w", encoding="utf-8", newline="") as f:
                 writer = csv.writer(f)
-                writer.writerow(
-                    [
-                        "frame_index",
-                        "timestamp",
-                        "ok",
-                        "tx", "ty", "tz",
-                        "rx", "ry", "rz",
-                        "num_markers"
-                    ]
-                )
+                writer.writerow([
+                            "frame_index", "timestamp", "ok", 
+                            "tx_cam", "ty_cam", "tz_cam", "rx_cam", "ry_cam", "rz_cam",
+                            "tx_rb", "ty_rb", "tz_rb", "rx_rb", "ry_rb", "rz_rb", # NUOVI CAMPI
+                            "num_markers"
+                        ])
                 for idx, frame in enumerate(job.results.get("frames", []), start=1):
                     ok = frame.get("ok", False)
                     tvec = frame.get("tvec", [None]*3)
@@ -461,12 +515,22 @@ class PoseWorker:
                     t_vals = ["" if v is None else f"{v:.6f}" for v in tvec]
                     r_vals = ["" if v is None else f"{v:.6f}" for v in rvec]
                     
+                    tvec_rob = frame.get("tvec_robot", [None]*3)
+                    rvec_rob = frame.get("rvec_robot", [None]*3)
+                    if tvec_rob is None: tvec_rob = [None]*3
+                    if rvec_rob is None: rvec_rob = [None]*3
+                    
+                    t_rob_vals = ["" if v is None else f"{v:.6f}" for v in tvec_rob]
+                    r_rob_vals = ["" if v is None else f"{v:.6f}" for v in rvec_rob]
+                    
                     writer.writerow([
                         idx,
                         frame.get("timestamp", ""),
                         ok,
                         *t_vals,
                         *r_vals,
+                        *t_rob_vals,
+                        *r_rob_vals, # Aggiungi colonne robot
                         num_mk
                     ])
             log.info(f"Pose CSV written to {out_csv.name}")
