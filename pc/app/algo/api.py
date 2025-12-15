@@ -8,7 +8,7 @@ from .pnp import estimate_marker_poses
 from .geometry import average_poses, quat_from_R
 from .viz import draw_sphere_overlay, draw_detected_markers
 
-# Mappa ID Marker -> ID Faccia
+# Mappa ID Marker -> ID Faccia (omessa per brevità, è la stessa di prima)
 DEFAULT_MARKER_MAP = {
     1: "H5", 2: "H2", 3: "P0", 4: "H3", 5: "H0", 6: "H6", 7: "P2", 8: "P8", 
     9: "H8", 10: "H4", 11: "P1", 12: "H9", 13: "P7", 14: "P6", 15: "H15", 
@@ -24,22 +24,17 @@ def estimate_truncated_ico_from_image(
     transforms: Mapping[str, np.ndarray],
     aruco_dict: str,
     marker_size: float,
-    # --- Parametri di Tuning Stabilità ---
-    min_marker_area_px: float = 150.0,       # Soglia dimensione minima (step 2)
-    weight_exponent: float = 1,            # Esponente per peso area (step 4)
-    outlier_distance_threshold: float = 0, # Metri per scartare outlier (step 4)
-    # -------------------------------------
+    min_marker_area_px: float = 150.0,
+    weight_exponent: float = 1,
+    outlier_distance_threshold: float = 0,
     return_overlay: bool = False,
-    timestamp: Optional[float] = None,       # Mantenuto per compatibilità interfaccia, ma inutilizzato
+    timestamp: Optional[float] = None,
     marker_map: Dict[int, str] = DEFAULT_MARKER_MAP
 ) -> Dict[str, Any]:
 
-        
-    # 1. Rilevamento 2D
+    # 1. Rilevamento
     detections = detect_markers(image, aruco_dict)
     
-    # --- 1b. Refinement Sub-Pixel ---
-    # Fondamentale per avere pose stabili. Affina i corner trovati.
     if detections:
         gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
         criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -47,43 +42,76 @@ def estimate_truncated_ico_from_image(
             cv.cornerSubPix(gray, det.corners, (5, 5), (-1, -1), criteria)
 
     # 2. Filtro Area
-    # Scartiamo i marker troppo piccoli (rumorosi) PRIMA del PnP
     valid_detections = [d for d in detections if d.area_px >= min_marker_area_px]
     
     if not valid_detections:
-        raise ValueError("Nessun marker valido trovato (filtro area o nessun rilevamento).")
+        raise ValueError("Nessun marker valido trovato.")
 
-    # 3. Stima Posa Marker (PnP)
-    # NESSUNA logica anti-flip o filtri temporali qui. 
-    # Ci fidiamo del solver in pnp.py e della media robusta successiva.
+    # 3. PnP
     poses = estimate_marker_poses(valid_detections, K, dist, marker_size)
-
     if not poses:
-        raise ValueError("PnP fallito su tutti i marker.")
+        raise ValueError("PnP fallito.")
 
-    # 4. Calcolo Posa del Corpo e Raccolta Pesi
+    # 4. Preparazione Candidati (Primari e Alternativi Flippati)
     body_poses_candidates = []
+    alternatives_forced = [] # Qui mettiamo la soluzione con Z invertita
     weights = []
     valid_marker_info = []
+    
+    # Dati grezzi per debug (Centri calcolati geometricamente)
+    # Li calcoliamo entrambi per ogni marker: Normal (Red) e Flipped (Green)
+    debug_centers_normal = [] 
+    debug_centers_flipped = []
+
+    GEO_RADIUS = 0.05678 
 
     for det, m_pose in zip(valid_detections, poses):
         face_id = marker_map.get(det.id)
         if face_id and face_id in transforms:
             T_face_body = transforms[face_id]
             
-            # Posa del Marker rispetto alla Camera
+            # --- A. Soluzione Primaria ---
             T_cam_marker = np.eye(4)
             T_cam_marker[:3, :3] = m_pose.R
             T_cam_marker[:3, 3] = m_pose.tvec.flatten()
             
-            # Posa del Corpo: T_cam_body = T_cam_marker * T_face_body
             T_cam_body = T_cam_marker @ T_face_body
-            
             body_poses_candidates.append(T_cam_body)
             
-            # Peso base = Area in pixel
-            weights.append(det.area_px) 
+            # --- B. Soluzione Alternativa (Flip Z Esplicito) ---
+            # Calcoliamo la trasformazione allo stesso modo, ma invertiamo manualmente gli assi
+            T_cam_marker_flip = np.eye(4)
             
+            # Copiamo la rotazione originale per modificarla
+            R_flipped = m_pose.R.copy()
+            
+            # Invertiamo l'asse Z (colonna 2) come richiesto.
+            # ATTENZIONE: Per mantenere la matrice una rotazione valida (determinante +1)
+            # e non trasformarla in una riflessione, dobbiamo invertire anche l'asse Y (colonna 1).
+            # Questo è geometricamente equivalente a ruotare il marker di 180° su se stesso.
+            R_flipped[:, 1] *= -1 # Invertiamo Y
+            R_flipped[:, 2] *= -1 # Invertiamo Z <--- Flip Z
+            
+            T_cam_marker_flip[:3, :3] = R_flipped
+            T_cam_marker_flip[:3, 3] = m_pose.tvec.flatten() # La posizione del marker non cambia
+            
+            T_cam_body_flip = T_cam_marker_flip @ T_face_body
+            alternatives_forced.append(T_cam_body_flip)
+            
+            # Peso
+            weights.append(det.area_px)
+            
+            # --- C. Calcolo Centri Geometrici per Debug (Visualizzazione) ---
+            # 1. Normale: Centro = T - Z * Raggio
+            z_axis = m_pose.R[:, 2]
+            center_normal = m_pose.tvec.flatten() - (z_axis * GEO_RADIUS)
+            debug_centers_normal.append(center_normal)
+            
+            # 2. Flippato: Centro = T + Z * Raggio (Opposto)
+            # (Matematicamente equivalente a usare R_flipped che ha -Z)
+            center_flipped = m_pose.tvec.flatten() + (z_axis * GEO_RADIUS)
+            debug_centers_flipped.append(center_flipped)
+
             valid_marker_info.append({
                 "id": det.id,
                 "face": face_id,
@@ -91,15 +119,20 @@ def estimate_truncated_ico_from_image(
                 "tvec": m_pose.tvec.flatten().tolist(),
                 "area_px": det.area_px 
             })
+        else:
+            # Marker non mappato nel JSON
+            alternatives_forced.append(None)
+            debug_centers_normal.append(None)
+            debug_centers_flipped.append(None)
 
     if not body_poses_candidates:
-        raise ValueError("Nessun marker rilevato corrisponde a facce note nel JSON.")
+        raise ValueError("Nessun marker corrisponde a facce note.")
 
-    # 5. Media PESATA ROBUSTA
-    # Usa la nuova funzione in geometry.py che supporta pesi esponenziali e rimozione outlier
-    T_final = average_poses(
+    # 5. Media e Selezione (con la tua logica custom)
+    T_final, flipped_indices = average_poses(
         body_poses_candidates, 
         weights=weights,
+        alternatives_4x4=alternatives_forced, # Passiamo i flip forzati
         weight_exponent=weight_exponent,
         outlier_distance_threshold=outlier_distance_threshold
     )
@@ -112,27 +145,60 @@ def estimate_truncated_ico_from_image(
     # 6. Overlay
     overlay_img = None
     if return_overlay:
-        # Disegna i box e gli ID dei marker usati
-        debug_img = draw_detected_markers(image, valid_detections, poses, K, dist, marker_size/2)
+        # Costruiamo la lista finale da visualizzare.
+        # Se un marker è stato "recuperato" (flipped), usiamo il centro verde.
+        # Altrimenti usiamo il centro rosso (o niente se era outlier scartato, ma qui mostriamo il candidato primario)
         
-        # Disegna la Sfera Rossa (Posa Finale calcolata)
-        sphere_radius = 0.057 # Raggio stimato sfera (da aggiustare sul tuo oggetto reale)
+        # Per coerenza visiva:
+        # Mostriamo VERDE se è stato FLIPPATO.
+        # Mostriamo ROSSO se è NORMALE.
+        # I pallini mostrano sempre "dove l'algoritmo pensa sia il centro" per quel marker.
+        
+        centers_to_draw_red = []
+        centers_to_draw_green = []
+        
+        for i in range(len(body_poses_candidates)):
+            if debug_centers_normal[i] is None:
+                centers_to_draw_red.append(None)
+                centers_to_draw_green.append(None)
+                continue
+                
+            if i in flipped_indices:
+                # Questo marker è stato flippato! Disegniamo il centro "opposto" in verde.
+                centers_to_draw_green.append(debug_centers_flipped[i])
+                centers_to_draw_red.append(None)
+            else:
+                # Marker normale (o outlier primario scartato). Disegniamo il rosso.
+                centers_to_draw_red.append(debug_centers_normal[i])
+                centers_to_draw_green.append(None)
+
+        debug_img = draw_detected_markers(
+            image, 
+            valid_detections, 
+            poses, 
+            K, 
+            dist, 
+            marker_size/2,
+            red_centers=centers_to_draw_red,    # Punti normali
+            green_centers=centers_to_draw_green # Punti flippati (fixed)
+        )
+        
+        # Sfera Globale
         overlay_img = draw_sphere_overlay(
             img=debug_img, 
             K=K, 
             dist=dist, 
             rvec=rvec_final, 
             tvec=t_final, 
-            radius=sphere_radius,
-            color=(0, 0, 255), # Rosso
-            alpha=0.2          # Trasparenza
+            radius=GEO_RADIUS,
+            color=(0, 0, 255),
+            alpha=0.2
         )
 
-        # Info a schermo
         dist_cm = np.linalg.norm(t_final) * 100
-        label = f"Dist: {dist_cm:.1f}cm | Mkrs: {len(body_poses_candidates)} | Exp: {weight_exponent}"
+        n_flipped = len(flipped_indices)
+        label = f"D:{dist_cm:.1f}cm | N:{len(body_poses_candidates)} | Flip:{n_flipped}"
         cv.putText(overlay_img, label, (20, 50), cv.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-
 
     return {
         "rvec": rvec_final,
@@ -142,6 +208,5 @@ def estimate_truncated_ico_from_image(
         "num_markers": len(body_poses_candidates),
         "markers": valid_marker_info,
         "overlay": overlay_img,
-        # filter_debug vuoto perché abbiamo rimosso il filtro temporale
         "filter_debug": {} 
     }
