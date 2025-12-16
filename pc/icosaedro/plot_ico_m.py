@@ -8,7 +8,18 @@ import json
 # CONFIGURAZIONE
 # ==========================================
 EDGE_LENGTH_METERS = 0.025  # 25mm = 0.025 metri
-FILENAME = "transforms_face_to_body.json"
+FILENAME = "transforms_face_to_body_v2.json"
+
+# Dizionario degli offset angolari (rotazione attorno a Z locale della faccia)
+# Se un ID non è in lista, l'offset sarà 0.
+MANUAL_OFFSETS = {
+    "H11": 120, "H12": -60, "H18": -30, "H16": -60, "H10": 180,
+    "P5": -54,  "H13": 90,  "P11": 234, "H14": 120, "H19": 60,
+    "H1": 180,  "H7": -60,  "P7": -54,  "H9": -120, "P3": -54,
+    "H17": 180, "P10": -126,"H8": -60,  "P1": -18,  "P2": 180,
+    "H4": -90,  "P8": -180, "H6": -150, "H5": 120,  "H15": -120,
+    "P4": 90,   "H0": 90,   "H3": 120,  "H2": 210,  "P0": 36,
+}
 
 def rotation_matrix_from_vectors(vec1, vec2):
     """Allinea vec1 a vec2."""
@@ -19,6 +30,17 @@ def rotation_matrix_from_vectors(vec1, vec2):
     if s == 0: return np.eye(3)
     kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
     return np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+
+def get_z_rotation_matrix(degrees):
+    """Restituisce una matrice 4x4 di rotazione attorno a Z."""
+    rad = np.radians(degrees)
+    c, s = np.cos(rad), np.sin(rad)
+    return np.array([
+        [c, -s, 0, 0],
+        [s,  c, 0, 0],
+        [0,  0, 1, 0],
+        [0,  0, 0, 1]
+    ])
 
 def build_geometry_and_save():
     # 1. Icosaedro Base
@@ -74,10 +96,10 @@ def build_geometry_and_save():
     pent_indices = [faces_idx[i] for i, t in enumerate(types) if t == 'pent']
     hex_indices  = [faces_idx[i] for i, t in enumerate(types) if t == 'hex']
 
-    # 3. ROTAZIONE DI ALLINEAMENTO (Y_BODY su P0)
+    # 3. ROTAZIONE DI ALLINEAMENTO (Z_BODY su P0)
     p0_center = np.mean(u_verts[pent_indices[0]], axis=0)
-    target_y = np.array([0.0, 1.0, 0.0])
-    R_align = rotation_matrix_from_vectors(p0_center, target_y)
+    target_z = np.array([0.0, 0.0, 1.0]) 
+    R_align = rotation_matrix_from_vectors(p0_center, target_z)
     u_verts = (R_align @ u_verts.T).T
 
     # 4. SCALATURA IN METRI
@@ -85,42 +107,64 @@ def build_geometry_and_save():
     scale = EDGE_LENGTH_METERS / curr_edge
     u_verts *= scale
 
-    # 5. CALCOLO MATRICI
+    # 5. CALCOLO MATRICI CON OFFSET
     transforms = {}
     
     def process_faces(indices, prefix):
         for i, idxs in enumerate(indices):
+            face_name = f"{prefix}{i}"
             coords = u_verts[idxs]
             center = np.mean(coords, axis=0)
             
-            # Frame Faccia (Z=Normale, X=Verso primo vertice)
+            # --- Frame Geometrico Standard ---
+            # Z=Normale, X=Verso primo vertice
             z_axis = center / np.linalg.norm(center)
             x_temp = coords[0] - center
             x_temp /= np.linalg.norm(x_temp)
             y_axis = np.cross(z_axis, x_temp); y_axis/=np.linalg.norm(y_axis)
             x_axis = np.cross(y_axis, z_axis); x_axis/=np.linalg.norm(x_axis)
             
-            T_body_face = np.eye(4)
-            T_body_face[:3, 0] = x_axis
-            T_body_face[:3, 1] = y_axis
-            T_body_face[:3, 2] = z_axis
-            T_body_face[:3, 3] = center
+            # Matrice Body -> Face (Geometrica)
+            T_body_face_geom = np.eye(4)
+            T_body_face_geom[:3, 0] = x_axis
+            T_body_face_geom[:3, 1] = y_axis
+            T_body_face_geom[:3, 2] = z_axis
+            T_body_face_geom[:3, 3] = center
             
-            # Quello che ci serve: Faccia -> Body
-            T_face_body = np.linalg.inv(T_body_face)
-            transforms[f"{prefix}{i}"] = T_face_body.tolist()
+            # --- Applicazione Offset Manuale ---
+            # Recuperiamo l'angolo dal dizionario (0 se non esiste)
+            offset_angle = MANUAL_OFFSETS.get(face_name, 0.0)
+            
+            # Creiamo matrice di rotazione Z locale
+            R_offset = get_z_rotation_matrix(offset_angle)
+            
+            # La posa del MARKER reale è la posa geometrica ruotata localmente
+            T_body_face_marker = T_body_face_geom @ R_offset
+            
+            # Quello che ci serve nel JSON: Marker -> Body
+            # (Ovvero l'inversa della posa del marker rispetto al body)
+            T_face_body = np.linalg.inv(T_body_face_marker)
+            transforms[face_name] = T_face_body.tolist()
+            
+            # Debug per P0 per confermare che l'offset venga preso
+            if face_name == "P0":
+                print(f"P0 Offset applicato: {offset_angle} gradi")
 
     process_faces(pent_indices, "P")
     process_faces(hex_indices,  "H")
     
     with open(FILENAME, "w") as f:
         json.dump(transforms, f, indent=4)
-    print(f"Salvato {FILENAME} in METRI (Lato={EDGE_LENGTH_METERS}m).")
-    
-    # Check rapido su P0
-    t_p0 = np.array(transforms["P0"])[:3, 3]
-    dist = np.linalg.norm(t_p0)
-    print(f"Distanza Centro <-> P0: {dist:.4f} m (Atteso ~0.058)")
+    print(f"Salvato {FILENAME} con {len(transforms)} trasformazioni.")
+    print("Nota: Le rotazioni manuali sono state incorporate.")
+
+    # Controllo ID mancanti
+    all_keys = set(transforms.keys())
+    offset_keys = set(MANUAL_OFFSETS.keys())
+    missing_in_offsets = all_keys - offset_keys
+    if missing_in_offsets:
+        print(f"ATTENZIONE: Nessun offset trovato per: {sorted(list(missing_in_offsets))}")
+        print("Verrà usato offset 0.0 per questi.")
 
 if __name__ == "__main__":
     build_geometry_and_save()
