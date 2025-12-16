@@ -350,3 +350,106 @@
 [BLE] Disconnected.
 [CAPTURE] Camera released
 [MAIN] Interrupted by user.
+[POSE] starting workers = 1
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+[BLE] Connected: True
+[CAPTURE] Camera opened id=0, freq=100ms
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[SESSION] start @ 2025-12-16T11:50:31.552588 freq=100ms use_camera=True
+[STATE] Capture session STARTED
+[POSE] Pose session started for session_2025-12-16_11-50-31
+[SESSION] stop @ 2025-12-16T11:50:34.209750
+[CAPTURE] Timed out closing frame queue
+[STATE] Capture session STOPPED and queued for pose
+[POSE] Pose session finishing for session_2025-12-16_11-50-31
+[POSE] Pose results written to session_2025-12-16_11-50-31_pose.json
+[POSE] Pose CSV written to session_2025-12-16_11-50-31_pose.csv
+[BLE] Disconnected.
+[CAPTURE] Camera released
+[MAIN] Interrupted by user.
+[POSE] starting workers = 1
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+[BLE] Connected: True
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[SESSION] start @ 2025-12-16T20:21:43.407230 freq=100ms use_camera=False
+[STATE] Capture session STARTED
+[POSE] Pose session started for session_2025-12-16_20-21-43
+[CAPTURE] Test mode: copying from ..\image_to_be_used, freq=100ms
+[SESSION] stop @ 2025-12-16T20:21:46.163889
+[CAPTURE] Timed out while queueing frame
+[CAPTURE] Test mode: loop finished
+[CAPTURE] Test mode: backend closed
+[CAPTURE] Timed out closing frame queue
+[STATE] Capture session STOPPED and queued for pose
+[POSE] Pose session finishing for session_2025-12-16_20-21-43
+[POSE] Pose results written to session_2025-12-16_20-21-43_pose.json
+[POSE] Pose CSV written to session_2025-12-16_20-21-43_pose.csv
+[BLE] Disconnected.
+[MAIN] Interrupted by user.
+[POSE] starting workers = 3
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+[BLE] Connected: True
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[SESSION] start @ 2025-12-16T20:25:50.003253 freq=100ms use_camera=False
+[STATE] Capture session STARTED
+[POSE] Pose session started for session_2025-12-16_20-25-50
+[CAPTURE] Test mode: copying from ..\image_to_be_used, freq=100ms
+[SESSION] stop @ 2025-12-16T20:25:52.036813
+[CAPTURE] Timed out while queueing frame
+[CAPTURE] Test mode: loop finished
+[CAPTURE] Test mode: backend closed
+[CAPTURE] Timed out closing frame queue
+[STATE] Capture session STOPPED and queued for pose
+[POSE] Pose session finishing for session_2025-12-16_20-25-50
+[POSE] Pose results written to session_2025-12-16_20-25-50_pose.json
+[POSE] Pose CSV written to session_2025-12-16_20-25-50_pose.csv
+[BLE] Disconnected.
+[MAIN] Interrupted by user.
+[POSE] starting workers = 3
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+[BLE] Connected: True
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[SESSION] start @ 2025-12-16T20:26:28.786809 freq=100ms use_camera=False
+[STATE] Capture session STARTED
+[POSE] Pose session started for session_2025-12-16_20-26-28
+[CAPTURE] Test mode: copying from ..\image_to_be_used, freq=100ms
+[SESSION] stop @ 2025-12-16T20:26:29.989041
+[CAPTURE] Timed out while queueing frame
+[CAPTURE] Test mode: loop finished
+[CAPTURE] Test mode: backend closed
+[CAPTURE] Timed out closing frame queue
+[STATE] Capture session STOPPED and queued for pose
+[POSE] Pose session finishing for session_2025-12-16_20-26-28
+[POSE] Pose results written to session_2025-12-16_20-26-28_pose.json
+[POSE] Pose CSV written to session_2025-12-16_20-26-28_pose.csv
+[BLE] Disconnected.
+[MAIN] Interrupted by user.
+[POSE] starting workers = 1
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+[BLE] Connected: True
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[SESSION] start @ 2025-12-16T20:27:10.808753 freq=100ms use_camera=False
+[STATE] Capture session STARTED
+[POSE] Pose session started for session_2025-12-16_20-27-10
+[CAPTURE] Test mode: copying from ..\image_to_be_used, freq=100ms
+[SESSION] stop @ 2025-12-16T20:27:11.727670
+[CAPTURE] Timed out while queueing frame
+[CAPTURE] Test mode: loop finished
+[CAPTURE] Test mode: backend closed
+[CAPTURE] Timed out closing frame queue
+[STATE] Capture session STOPPED and queued for pose
+[POSE] Pose session finishing for session_2025-12-16_20-27-10
+[POSE] Pose results written to session_2025-12-16_20-27-10_pose.json
+[POSE] Pose CSV written to session_2025-12-16_20-27-10_pose.csv
+[BLE] Disconnected.
+[MAIN] Interrupted by user.
