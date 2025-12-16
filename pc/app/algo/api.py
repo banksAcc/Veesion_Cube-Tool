@@ -145,15 +145,7 @@ def estimate_truncated_ico_from_image(
     # 6. Overlay
     overlay_img = None
     if return_overlay:
-        # Costruiamo la lista finale da visualizzare.
-        # Se un marker è stato "recuperato" (flipped), usiamo il centro verde.
-        # Altrimenti usiamo il centro rosso (o niente se era outlier scartato, ma qui mostriamo il candidato primario)
-        
-        # Per coerenza visiva:
-        # Mostriamo VERDE se è stato FLIPPATO.
-        # Mostriamo ROSSO se è NORMALE.
-        # I pallini mostrano sempre "dove l'algoritmo pensa sia il centro" per quel marker.
-        
+        # Costruiamo la lista finale da visualizzare (logica invariata)
         centers_to_draw_red = []
         centers_to_draw_green = []
         
@@ -164,14 +156,13 @@ def estimate_truncated_ico_from_image(
                 continue
                 
             if i in flipped_indices:
-                # Questo marker è stato flippato! Disegniamo il centro "opposto" in verde.
                 centers_to_draw_green.append(debug_centers_flipped[i])
                 centers_to_draw_red.append(None)
             else:
-                # Marker normale (o outlier primario scartato). Disegniamo il rosso.
                 centers_to_draw_red.append(debug_centers_normal[i])
                 centers_to_draw_green.append(None)
 
+        # Chiamata alla funzione aggiornata (che ora disegna SOLO box e pallini, NIENTE assi locali)
         debug_img = draw_detected_markers(
             image, 
             valid_detections, 
@@ -179,22 +170,31 @@ def estimate_truncated_ico_from_image(
             K, 
             dist, 
             marker_size/2,
-            red_centers=centers_to_draw_red,    # Punti normali
-            green_centers=centers_to_draw_green # Punti flippati (fixed)
+            red_centers=centers_to_draw_red,    
+            green_centers=centers_to_draw_green 
         )
+
+        # --- CALCOLO SHIFT SOLO PER GLI ASSI ---
+        Z_SHIFT = 0.17  # 15 cm
+        local_z_axis = R_final[:, 2] # Asse Z locale
         
-        # Sfera Globale
+        # Calcoliamo dove disegnare gli assi: Centro - (Z * 0.15)
+        t_axes_shifted = t_final - (local_z_axis * Z_SHIFT)
+
+        # Sfera Globale + ASSI DEL CORPO
+        # rvec_final e tvec_final contengono la posa media del corpo solido.
+        # Viz.py ora userà questi per disegnare la terna d'assi XYZ globale
         overlay_img = draw_sphere_overlay(
             img=debug_img, 
             K=K, 
             dist=dist, 
             rvec=rvec_final, 
-            tvec=t_final, 
+            tvec=t_final,          # <--- La sfera resta al centro (t_final)
             radius=GEO_RADIUS,
             color=(0, 0, 255),
-            alpha=0.2
+            alpha=0.2,
+            tvec_axes=t_axes_shifted # <--- Gli assi vengono disegnati shiftati
         )
-
         dist_cm = np.linalg.norm(t_final) * 100
         n_flipped = len(flipped_indices)
         label = f"D:{dist_cm:.1f}cm | N:{len(body_poses_candidates)} | Flip:{n_flipped}"

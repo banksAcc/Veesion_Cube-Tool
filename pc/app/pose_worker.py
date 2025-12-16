@@ -414,8 +414,8 @@ class PoseWorker:
                 
                 # Parametri Tuning Stabilità (Override dei default per robustezza)
                 min_marker_area_px=250.0,
-                weight_exponent=2.1,         # Consigliato 2.0 per stabilità
-                outlier_distance_threshold=0.17, # 8cm tolleranza
+                weight_exponent=1.9,         # Consigliato 2.0 per stabilità
+                outlier_distance_threshold=0.04, # 8cm tolleranza
                 
                 return_overlay=True,
                 timestamp=packet.timestamp,

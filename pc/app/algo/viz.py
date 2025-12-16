@@ -6,10 +6,6 @@ from typing import Tuple, List, Optional
 # Cache per i punti della sfera (evita di ricalcolarli a ogni frame)
 _SPHERE_CACHE = None
 
-# ... (funzioni _get_sphere_geometry e draw_sphere_overlay rimangono uguali) ...
-# Riporto solo draw_sphere_overlay per completezza se necessario, ma è invariata.
-# Qui metto solo le funzioni modificate/necessarie.
-
 def _get_sphere_geometry(radius: float, rings: int = 10, sectors: int = 10):
     global _SPHERE_CACHE
     if _SPHERE_CACHE is None or _SPHERE_CACHE[0] != radius:
@@ -38,10 +34,15 @@ def draw_sphere_overlay(img: np.ndarray, K: np.ndarray, dist: np.ndarray,
                         rvec: np.ndarray, tvec: np.ndarray, 
                         radius: float, 
                         color: Tuple[int, int, int] = (0, 0, 255), 
-                        alpha: float = 0.2) -> np.ndarray:
+                        alpha: float = 0.2,
+                        tvec_axes: Optional[np.ndarray] = None) -> np.ndarray: # <--- NUOVO PARAMETRO
+    """
+    Disegna la sfera su 'tvec' e gli assi su 'tvec_axes' (se fornito, altrimenti su tvec).
+    """
     overlay = img.copy()
     output = img.copy()
     
+    # --- Disegno SFERA (usa tvec originale) ---
     center_2d_pts, _ = cv.projectPoints(np.array([[0.,0.,0.]]), rvec, tvec, K, dist)
     cx, cy = center_2d_pts[0].ravel().astype(int)
     
@@ -51,9 +52,11 @@ def draw_sphere_overlay(img: np.ndarray, K: np.ndarray, dist: np.ndarray,
     
     h, w = img.shape[:2]
     if radius_px > 0 and 0 <= cx < w and 0 <= cy < h:
+        # Sfera solida trasparente
         cv.circle(overlay, (cx, cy), radius_px, color, -1)
         cv.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
         
+        # Wireframe Sfera
         pts_3d, lines_idx = _get_sphere_geometry(radius)
         pts_2d, _ = cv.projectPoints(pts_3d, rvec, tvec, K, dist)
         pts_2d = pts_2d.reshape(-1, 2).astype(int)
@@ -64,17 +67,21 @@ def draw_sphere_overlay(img: np.ndarray, K: np.ndarray, dist: np.ndarray,
             pt2 = tuple(pts_2d[p2_idx])
             if (0 <= pt1[0] < w and 0 <= pt1[1] < h) or (0 <= pt2[0] < w and 0 <= pt2[1] < h):
                 cv.line(output, pt1, pt2, line_color, 1, cv.LINE_AA)
+
+        # --- Disegno ASSI (usa tvec_axes se esiste) ---
+        target_tvec = tvec_axes if tvec_axes is not None else tvec
+        
+        # Lunghezza assi visualizzati
+        axis_len = radius * 1.5
+        cv.drawFrameAxes(output, K, dist, rvec, target_tvec, axis_len, 3)
+
     return output
 
 def draw_detected_markers(img: np.ndarray, detections, poses, K, dist, size, 
                           red_centers: Optional[List[Optional[np.ndarray]]] = None,
                           green_centers: Optional[List[Optional[np.ndarray]]] = None):
     """
-    Disegna marker, i loro centri stimati e gli assi di riferimento per entrambi.
-    
-    Args:
-        red_centers: Lista di tvec per i centri 'Normali' (Rosso)
-        green_centers: Lista di tvec per i centri 'Flippati' (Verde)
+    Disegna i box dei marker e i pallini sui centri stimati, MA NON GLI ASSI LOCALI.
     """
     out = img.copy()
     n = len(detections)
@@ -83,20 +90,19 @@ def draw_detected_markers(img: np.ndarray, detections, poses, K, dist, size,
     if green_centers is None: green_centers = [None] * n
 
     for i, (det, pose) in enumerate(zip(detections, poses)):
-        # --- 1. Disegna Box e Assi del Marker originale ---
+        # --- 1. Disegna Box del Marker ---
         pts = det.corners.reshape((-1, 1, 2)).astype(np.int32)
         cv.polylines(out, [pts], True, (0, 255, 255), 2)
         
-        # Disegna assi sul marker (Reference)
-        cv.drawFrameAxes(out, K, dist, pose.rvec, pose.tvec, size, 2)
+        # --- MODIFICA: RIMOSSO cv.drawFrameAxes SUL MARKER ---
         
         # ID Marker
         c = det.corners[0]
         x, y = int(c[0]), int(c[1])
         cv.rectangle(out, (x, y - 5), (x, y + 5), (0, 0, 0), -1)
         
-        # --- Helper: Disegna Pallino + Assi nel Centro stimato ---
-        def draw_center_and_axes(center_tvec, marker_rvec, color_bgr):
+        # --- Helper: Disegna Pallino (SENZA ASSI) ---
+        def draw_center_point(center_tvec, color_bgr):
              # Proiezione del punto 3D per disegnare il pallino
             pts_2d, _ = cv.projectPoints(center_tvec.reshape(1, 1, 3), 
                                          np.zeros(3), np.zeros(3), 
@@ -111,18 +117,16 @@ def draw_detected_markers(img: np.ndarray, detections, poses, K, dist, size,
             marker_center_2d = np.mean(det.corners, axis=0).astype(int)
             cv.line(out, tuple(marker_center_2d), (cx, cy), color_bgr, 1, cv.LINE_AA)
             
-            # 3. [NUOVO] Disegna la terna d'assi nel centro sfera
-            # Usiamo la posizione del centro (center_tvec) ma la rotazione del marker (marker_rvec)
-            cv.drawFrameAxes(out, K, dist, marker_rvec, center_tvec, size, 2)
+            # --- MODIFICA: RIMOSSO cv.drawFrameAxes NEL CENTRO SFERA ---
 
         # --- Esecuzione disegno per i centri ---
         
-        # Disegna ROSSO (Normale) + Assi
+        # Disegna ROSSO (Normale)
         if red_centers[i] is not None:
-            draw_center_and_axes(red_centers[i], pose.rvec, (0, 0, 255))
+            draw_center_point(red_centers[i], (0, 0, 255))
             
-        # Disegna VERDE (Flippato) + Assi
+        # Disegna VERDE (Flippato)
         if green_centers[i] is not None:
-            draw_center_and_axes(green_centers[i], pose.rvec, (0, 255, 0))
+            draw_center_point(green_centers[i], (0, 255, 0))
 
     return out
