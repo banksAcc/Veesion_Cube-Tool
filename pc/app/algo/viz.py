@@ -70,7 +70,8 @@ def draw_detected_markers(img: np.ndarray, detections, poses, K, dist, size,
                           red_centers: Optional[List[Optional[np.ndarray]]] = None,
                           green_centers: Optional[List[Optional[np.ndarray]]] = None):
     """
-    Disegna marker e i loro centri stimati.
+    Disegna marker, i loro centri stimati e gli assi di riferimento per entrambi.
+    
     Args:
         red_centers: Lista di tvec per i centri 'Normali' (Rosso)
         green_centers: Lista di tvec per i centri 'Flippati' (Verde)
@@ -82,9 +83,11 @@ def draw_detected_markers(img: np.ndarray, detections, poses, K, dist, size,
     if green_centers is None: green_centers = [None] * n
 
     for i, (det, pose) in enumerate(zip(detections, poses)):
-        # Box e Assi
+        # --- 1. Disegna Box e Assi del Marker originale ---
         pts = det.corners.reshape((-1, 1, 2)).astype(np.int32)
         cv.polylines(out, [pts], True, (0, 255, 255), 2)
+        
+        # Disegna assi sul marker (Reference)
         cv.drawFrameAxes(out, K, dist, pose.rvec, pose.tvec, size, 2)
         
         # ID Marker
@@ -92,28 +95,34 @@ def draw_detected_markers(img: np.ndarray, detections, poses, K, dist, size,
         x, y = int(c[0]), int(c[1])
         cv.rectangle(out, (x, y - 5), (x, y + 5), (0, 0, 0), -1)
         
-        # --- Helper per disegnare il pallino ---
-        def draw_center(center_tvec, color_bgr):
-             # Proiezione del punto 3D (assumendo rvec,tvec = 0 perché punto è già nel ref. camera)
+        # --- Helper: Disegna Pallino + Assi nel Centro stimato ---
+        def draw_center_and_axes(center_tvec, marker_rvec, color_bgr):
+             # Proiezione del punto 3D per disegnare il pallino
             pts_2d, _ = cv.projectPoints(center_tvec.reshape(1, 1, 3), 
                                          np.zeros(3), np.zeros(3), 
                                          K, dist)
             cx, cy = pts_2d[0].ravel().astype(int)
             
-            # Pallino colorato + Bordo bianco
+            # 1. Pallino colorato + Bordo bianco
             cv.circle(out, (cx, cy), 5, color_bgr, -1)
             cv.circle(out, (cx, cy), 6, (255, 255, 255), 1)
             
-            # Linea dal marker al centro stimato
+            # 2. Linea dal marker al centro stimato (visualizza il raggio)
             marker_center_2d = np.mean(det.corners, axis=0).astype(int)
             cv.line(out, tuple(marker_center_2d), (cx, cy), color_bgr, 1, cv.LINE_AA)
-
-        # Disegna ROSSO (Normale)
-        if red_centers[i] is not None:
-            draw_center(red_centers[i], (0, 0, 255))
             
-        # Disegna VERDE (Flippato)
+            # 3. [NUOVO] Disegna la terna d'assi nel centro sfera
+            # Usiamo la posizione del centro (center_tvec) ma la rotazione del marker (marker_rvec)
+            cv.drawFrameAxes(out, K, dist, marker_rvec, center_tvec, size, 2)
+
+        # --- Esecuzione disegno per i centri ---
+        
+        # Disegna ROSSO (Normale) + Assi
+        if red_centers[i] is not None:
+            draw_center_and_axes(red_centers[i], pose.rvec, (0, 0, 255))
+            
+        # Disegna VERDE (Flippato) + Assi
         if green_centers[i] is not None:
-            draw_center(green_centers[i], (0, 255, 0))
+            draw_center_and_axes(green_centers[i], pose.rvec, (0, 255, 0))
 
     return out

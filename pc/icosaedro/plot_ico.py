@@ -4,6 +4,24 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial import ConvexHull
 import json
 
+# --- FUNZIONE AGGIUNTA: Matrice di rotazione tra due vettori ---
+def rotation_matrix_from_vectors(vec1, vec2):
+    """
+    Trova la matrice di rotazione che allinea vec1 su vec2.
+    """
+    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+    v = np.cross(a, b)
+    c = np.dot(a, b)
+    s = np.linalg.norm(v)
+    
+    # Se i vettori sono già allineati, restituisci identità
+    if s < 1e-6:
+        return np.eye(3)
+        
+    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+    rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+    return rotation_matrix
+
 # --- 1. COSTRUZIONE GEOMETRIA (Standard) ---
 def build_truncated_icosahedron(edge_length_mm: float):
     phi = (1 + np.sqrt(5)) / 2
@@ -100,10 +118,34 @@ def process_geometry_and_save(edge_len=25.0, filename="transforms_face_to_body.j
     geo = build_truncated_icosahedron(edge_len)
     V = geo["vertices"]
     
+    # ---------------------------------------------------------
+    # MODIFICA: Ruotare tutto il solido affinché un pentagono sia su Z+
+    # ---------------------------------------------------------
+    # 1. Prendiamo il primo pentagono disponibile
+    first_pent_indices = geo["pent_faces"][0]
+    pent_coords = V[first_pent_indices]
+    pent_center = np.mean(pent_coords, axis=0)
+    
+    # 2. Vettore target: Asse Z globale
+    target_z = np.array([0, 0, 1])
+    
+    # 3. Calcoliamo la matrice di rotazione R che porta pent_center -> target_z
+    R_align = rotation_matrix_from_vectors(pent_center, target_z)
+    
+    # 4. Applichiamo la rotazione a TUTTI i vertici
+    # (V è Nx3, per ruotare facciamo (R @ V.T).T oppure V @ R.T)
+    V = np.dot(V, R_align.T)
+    
+    # Aggiorniamo i vertici nel dizionario per sicurezza (anche se useremo V qui sotto)
+    geo["vertices"] = V
+    
+    print("Geometria ruotata: L'asse Z del Body ora passa per il centro del Pentagono 0.")
+    # ---------------------------------------------------------
+
     # Dizionario per salvare le matrici T_Face_to_Body
     transforms_inverse = {}
     
-    # Dati per il plot (usiamo ancora T_Body_to_Face per disegnare le terne SULLE facce)
+    # Dati per il plot
     plot_data = {"centers":[], "x":[], "y":[], "z":[], "labels":[], "polys":[]}
     
     def add_face_data(face_indices, prefix, idx):
@@ -114,7 +156,6 @@ def process_geometry_and_save(edge_len=25.0, filename="transforms_face_to_body.j
         T_body_to_face = compute_frame_matrix(center, coords[0])
         
         # 2. Calcoliamo l'INVERSA: Dalla Faccia al Centro Solido
-        # Questa è quella che serve a te per ritrovare il centro partendo dalla faccia
         T_face_to_body = np.linalg.inv(T_body_to_face)
         
         name = f"{prefix}{idx}"
@@ -122,7 +163,7 @@ def process_geometry_and_save(edge_len=25.0, filename="transforms_face_to_body.j
         # Salviamo l'INVERSA nel JSON
         transforms_inverse[name] = T_face_to_body.tolist()
         
-        # Salviamo la DIRETTA per il plot (perché vogliamo disegnare gli assi sulla faccia)
+        # Salviamo la DIRETTA per il plot
         plot_data["centers"].append(center)
         plot_data["x"].append(T_body_to_face[0:3,0])
         plot_data["y"].append(T_body_to_face[0:3,1])
@@ -151,12 +192,14 @@ def plot_final_setup(plot_data, body_radius_approx=60):
     ax.add_collection3d(coll)
     
     # BODY FRAME (Gigante al centro)
+    # Ora questo frame (che è fisso sugli assi globali) punterà attraverso il pentagono
     L_body = body_radius_approx * 1.6
     o = [0,0,0]
     ax.quiver(o[0], o[1], o[2], 1, 0, 0, length=L_body, color='#cc0000', linewidth=4, arrow_length_ratio=0.05)
     ax.quiver(o[0], o[1], o[2], 0, 1, 0, length=L_body, color='#00cc00', linewidth=4, arrow_length_ratio=0.05)
     ax.quiver(o[0], o[1], o[2], 0, 0, 1, length=L_body, color='#0000cc', linewidth=4, arrow_length_ratio=0.05)
     ax.text(L_body,0,0,"X_BODY", color='#cc0000', fontsize=12, weight='bold')
+    ax.text(0,0,L_body,"Z_BODY (Pentagono)", color='#0000cc', fontsize=12, weight='bold')
     
     # FACE FRAMES
     centers = np.array(plot_data["centers"])
@@ -177,6 +220,10 @@ def plot_final_setup(plot_data, body_radius_approx=60):
     ax.set_xlim(-lim, lim); ax.set_ylim(-lim, lim); ax.set_zlim(-lim, lim)
     ax.set_box_aspect([1,1,1])
     ax.axis('off')
+    
+    # Impostiamo la vista in modo che Z sia in alto
+    ax.view_init(elev=20, azim=45)
+    
     plt.tight_layout()
     plt.show()
 
