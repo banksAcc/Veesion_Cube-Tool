@@ -558,3 +558,35 @@
 [POSE] Pose CSV written to session_2025-12-16_21-13-52_pose.csv
 [BLE] Disconnected.
 [MAIN] Interrupted by user.
+[POSE] starting workers = 1
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+[BLE] No device found.
+[BLE] No address: exiting.
+[POSE] starting workers = 1
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+[BLE] Connected: True
+[CAPTURE] Capture warm-up failed: No camera with serial 23324651
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[BLE] Disconnected.
+[MAIN] Interrupted by user.
+[POSE] starting workers = 1
+[BLE] Scanning 3.0s for 'ESP32-RGB-BLE*' ...
+[BLE] Found: ESP32-RGB-BLE @ 44:1D:64:F4:AC:D2
+[BLE] Connecting to 44:1D:64:F4:AC:D2 ...
+[BLE] Connected: True
+[CAPTURE] Camera opened id=0, freq=100ms
+[BLE] Subscribed to notifications. (CTRL+C to exit)
+[SESSION] start @ 2025-12-18T15:39:58.045773 freq=100ms use_camera=True
+[STATE] Capture session STARTED
+[POSE] Pose session started for session_2025-12-18_15-39-58
+[SESSION] stop @ 2025-12-18T15:40:01.184184
+[CAPTURE] Timed out closing frame queue
+[STATE] Capture session STOPPED and queued for pose
+[POSE] Pose session finishing for session_2025-12-18_15-39-58
+[POSE] Pose results written to session_2025-12-18_15-39-58_pose.json
+[POSE] Pose CSV written to session_2025-12-18_15-39-58_pose.csv
+[BLE] Disconnected.
+[CAPTURE] Camera released
+[MAIN] Interrupted by user.

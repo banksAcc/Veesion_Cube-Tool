@@ -13,7 +13,7 @@ FILENAME = "transforms_face_to_body_v2.json"
 # Dizionario degli offset angolari (rotazione attorno a Z locale della faccia)
 # Se un ID non è in lista, l'offset sarà 0.
 MANUAL_OFFSETS = {
-    "H11": 120, "H12": -60, "H18": -30, "H16": -60, "H10": 180,
+    "H11": 120, "H12": -60, "H18": -30, "H16": -60, "H10": -150,
     "P5": -54,  "H13": 90,  "P11": 234, "H14": 120, "H19": 60,
     "H1": 180,  "H7": -60,  "P7": -54,  "H9": -120, "P3": -54,
     "H17": 180, "P10": -126,"H8": -60,  "P1": -18,  "P2": 180,
