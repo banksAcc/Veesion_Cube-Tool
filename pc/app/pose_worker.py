@@ -545,9 +545,11 @@ class PoseWorker:
             frame_entry["marker_filter"] = result["filter_debug"]
 
         return frame_entry, overlay
-
+    
     def _write_results(self, job: SessionJob) -> None:
         label = job.label
+        
+        # 1. JSON (Manteniamo il dump completo per sicurezza/debug futuro)
         out_json = self.output_root / f"{label}_pose.json"
         try:
             with out_json.open("w", encoding="utf-8") as f:
@@ -556,44 +558,50 @@ class PoseWorker:
         except Exception as exc:
             log.error(f"Failed to write pose results: {exc}")
 
-        # CSV semplificato per ICO (solo rvec/tvec base, niente tip/wand)
+        # 2. CSV (SOLO POSA PUNTA ROBOT)
         out_csv = self.output_root / f"{label}_pose.csv"
         try:
             with out_csv.open("w", encoding="utf-8", newline="") as f:
                 writer = csv.writer(f)
-                writer.writerow([
-                            "frame_index", "timestamp", "ok", 
-                            "tx_cam", "ty_cam", "tz_cam", "rx_cam", "ry_cam", "rz_cam",
-                            "tx_rb", "ty_rb", "tz_rb", "rx_rb", "ry_rb", "rz_rb", # NUOVI CAMPI
-                            "num_markers"
-                        ])
+                
+                # HEADER SEMPLIFICATO
+                # Salviamo solo ciò che serve al robot
+                headers = [
+                    "frame_index", "timestamp", "ok", "num_markers",
+                    "x_tip_robot", "y_tip_robot", "z_tip_robot", 
+                    "rx_tip_robot", "ry_tip_robot", "rz_tip_robot"
+                ]
+                writer.writerow(headers)
+
                 for idx, frame in enumerate(job.results.get("frames", []), start=1):
                     ok = frame.get("ok", False)
-                    tvec = frame.get("tvec", [None]*3)
-                    rvec = frame.get("rvec", [None]*3)
                     num_mk = frame.get("num_markers", 0)
+                    ts = frame.get("timestamp", "")
 
-                    t_vals = ["" if v is None else f"{v:.6f}" for v in tvec]
-                    r_vals = ["" if v is None else f"{v:.6f}" for v in rvec]
-                    
-                    tvec_rob = frame.get("tvec_robot", [None]*3)
-                    rvec_rob = frame.get("rvec_robot", [None]*3)
-                    if tvec_rob is None: tvec_rob = [None]*3
-                    if rvec_rob is None: rvec_rob = [None]*3
-                    
-                    t_rob_vals = ["" if v is None else f"{v:.6f}" for v in tvec_rob]
-                    r_rob_vals = ["" if v is None else f"{v:.6f}" for v in rvec_rob]
-                    
-                    writer.writerow([
-                        idx,
-                        frame.get("timestamp", ""),
-                        ok,
-                        *t_vals,
-                        *r_vals,
-                        *t_rob_vals,
-                        *r_rob_vals, # Aggiungi colonne robot
-                        num_mk
-                    ])
+                    # Prendiamo SOLO i dati trasformati (Punta in Base Robot)
+                    # Questi vengono calcolati in _process_ico_frame
+                    tvec = frame.get("tvec_robot", [None]*3)
+                    rvec = frame.get("rvec_robot", [None]*3)
+
+                    # Gestione sicurezza se i dati sono None (es. frame perso)
+                    if tvec is None: tvec = [None]*3
+                    if rvec is None: rvec = [None]*3
+
+                    # Formattazione a 6 decimali per precisione
+                    def fmt(val):
+                        return f"{val:.6f}" if val is not None else ""
+
+                    row = [
+                        idx, 
+                        ts, 
+                        ok, 
+                        num_mk,
+                        # Coordinate Punta
+                        fmt(tvec[0]), fmt(tvec[1]), fmt(tvec[2]),
+                        fmt(rvec[0]), fmt(rvec[1]), fmt(rvec[2]),
+                    ]
+                    writer.writerow(row)
+
             log.info(f"Pose CSV written to {out_csv.name}")
         except Exception as exc:
             log.error(f"Failed to write pose CSV: {exc}")

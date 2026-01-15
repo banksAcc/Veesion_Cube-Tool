@@ -9,7 +9,7 @@ cv2.setUseOptimized(True)     # abilita ottimizzazioni interne
 
 def calibrate_charuco():
     # --- 1. CONFIGURAZIONE PARAMETRI ---
-    IMAGES_DIR = 'img'
+    IMAGES_DIR = 'calibrazione_balser_15-01-2026'
     EXTENSION = '*.tiff' # O *.png
 
     # Parametri della ChArUco Board

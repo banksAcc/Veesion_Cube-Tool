@@ -177,7 +177,7 @@ def estimate_truncated_ico_from_image(
         # --- CALCOLO MATEMATICO PUNTA (TIP) ---
         # Definiamo l'offset della punta rispetto al centro dell'icosaedro
         # Nota: Il segno meno indica che la punta è lungo l'asse Z negativo locale
-        Z_SHIFT = 0.17  # Metri (distanza centro -> punta)
+        Z_SHIFT = 0.205  # Metri (distanza centro -> punta)
         local_z_axis = R_final[:, 2] 
         
         # Calcolo posizione della punta nel sistema Camera
