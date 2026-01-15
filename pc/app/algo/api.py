@@ -174,26 +174,33 @@ def estimate_truncated_ico_from_image(
             green_centers=centers_to_draw_green 
         )
 
-        # --- CALCOLO SHIFT SOLO PER GLI ASSI ---
-        Z_SHIFT = 0.17  # 15 cm
-        local_z_axis = R_final[:, 2] # Asse Z locale
+        # --- CALCOLO MATEMATICO PUNTA (TIP) ---
+        # Definiamo l'offset della punta rispetto al centro dell'icosaedro
+        # Nota: Il segno meno indica che la punta è lungo l'asse Z negativo locale
+        Z_SHIFT = 0.17  # Metri (distanza centro -> punta)
+        local_z_axis = R_final[:, 2] 
         
-        # Calcoliamo dove disegnare gli assi: Centro - (Z * 0.15)
-        t_axes_shifted = t_final - (local_z_axis * Z_SHIFT)
+        # Calcolo posizione della punta nel sistema Camera
+        t_tip_cam = t_final - (local_z_axis * Z_SHIFT)
+        
+        # Per la punta, l'orientamento (rvec) rimane solidale al corpo (R_final)
+        # Se necessario ruotare il frame della punta, farlo qui. Per ora usiamo R_final.
+        
+        # --- DISEGNO OVERLAY ---
+        # Usiamo t_tip_cam per disegnare gli assi sulla punta
+        t_axes_shifted = t_tip_cam 
 
-        # Sfera Globale + ASSI DEL CORPO
-        # rvec_final e tvec_final contengono la posa media del corpo solido.
-        # Viz.py ora userà questi per disegnare la terna d'assi XYZ globale
+        # Sfera Globale + ASSI SULLA PUNTA
         overlay_img = draw_sphere_overlay(
             img=debug_img, 
             K=K, 
             dist=dist, 
             rvec=rvec_final, 
-            tvec=t_final,          # <--- La sfera resta al centro (t_final)
+            tvec=t_final,          # La sfera rossa resta sul centro geometrico
             radius=GEO_RADIUS,
             color=(0, 0, 255),
             alpha=0.2,
-            tvec_axes=t_axes_shifted # <--- Gli assi vengono disegnati shiftati
+            tvec_axes=t_axes_shifted # Gli assi XYZ appaiono sulla punta
         )
         dist_cm = np.linalg.norm(t_final) * 100
         n_flipped = len(flipped_indices)
@@ -203,6 +210,7 @@ def estimate_truncated_ico_from_image(
     return {
         "rvec": rvec_final,
         "tvec": t_final,
+        "tvec_tip": t_tip_cam, # Posizione Punta
         "R": R_final,
         "quat": quat_final,
         "num_markers": len(body_poses_candidates),

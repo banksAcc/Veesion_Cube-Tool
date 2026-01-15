@@ -434,30 +434,89 @@ class PoseWorker:
                 None,
             )
     
-        # --- NUOVA SEZIONE: 2.5 CALIBRAZIONE ESTRINSECA (CAMERA -> ROBOT) ---
-        extrin_path = self.cfg.pose.extrinsic_matrix_json
+        # --- NUOVA SEZIONE: 2.5 CALIBRAZIONE ESTRINSECA (CAMERA -> ROBOT) ---        
+        # DATI UTENTE (Unità: mm e gradi)
+        # Posizione Camera rispetto alla Base Robot
+        EXT_X_MM = 871.432
+        EXT_Y_MM = -61.7029
+        EXT_Z_MM = 760.249
+        
+        # Rotazione Eulero ZYZ (Gradi)
+        EXT_A_DEG = 149.045   # Z (Phi)
+        EXT_B_DEG = 150.698   # Y (Theta)
+        EXT_C_DEG = -90.0639  # Z (Psi)
+
+        def _get_extrinsic_matrix_ZYZ():
+            # 1. Conversione mm -> metri (il codice di visione lavora in metri)
+            x = EXT_X_MM / 1000.0
+            y = EXT_Y_MM / 1000.0
+            z = EXT_Z_MM / 1000.0
+            
+            # 2. Conversione Gradi -> Radianti
+            a = np.radians(EXT_A_DEG)
+            b = np.radians(EXT_B_DEG)
+            c = np.radians(EXT_C_DEG)
+            
+            # 3. Costruzione Matrice Rotazione ZYZ
+            # R = Rz(a) * Ry(b) * Rz(c)
+            
+            c_a, s_a = np.cos(a), np.sin(a)
+            c_b, s_b = np.cos(b), np.sin(b)
+            c_c, s_c = np.cos(c), np.sin(c)
+            
+            # Matrice Rz(a)
+            Rz_a = np.array([
+                [c_a, -s_a, 0],
+                [s_a,  c_a, 0],
+                [0,    0,   1]
+            ])
+            # Matrice Ry(b)
+            Ry_b = np.array([
+                [ c_b, 0, s_b],
+                [   0, 1,   0],
+                [-s_b, 0, c_b]
+            ])
+            # Matrice Rz(c)
+            Rz_c = np.array([
+                [c_c, -s_c, 0],
+                [s_c,  c_c, 0],
+                [0,    0,   1]
+            ])
+            
+            # Moltiplicazione matriciale standard
+            R = Rz_a @ Ry_b @ Rz_c
+            
+            # 4. Assemblaggio Matrice 4x4
+            T = np.eye(4)
+            T[:3, :3] = R
+            T[:3, 3] = [x, y, z]
+            return T
+
+        # Variabili output robot
         rvec_base, tvec_base = None, None
 
-        if extrin_path:
-            # Caricamento Lazy della matrice
-            if self._cached_extrin_path != str(extrin_path):
-                try:
-                    self._T_base_cam = load_extrinsic_matrix(str(extrin_path))
-                    self._cached_extrin_path = str(extrin_path)
-                except Exception as e:
-                    log.error(f"Impossibile caricare estrinseci: {e}")
-
-            # Calcolo trasformazione
-            if self._T_base_cam is not None:
-                # 1. Posa oggetto rispetto alla camera
-                T_cam_target = to_matrix(result["rvec"], result["tvec"])
+        # Eseguiamo i calcoli solo se la visione ha avuto successo
+        if result.get("ok", False):
+            # Matrice Base -> Camera
+            T_base_cam = _get_extrinsic_matrix_ZYZ()
+            
+            # Recuperiamo la posa della PUNTA (calcolata in api.py) rispetto alla Camera
+            # result["tvec_tip"] è il vettore traslazione della punta
+            # result["rvec"] è la rotazione (assumiamo orientamento punta = orientamento corpo)
+            tvec_tip_cam = result.get("tvec_tip")
+            rvec_tip_cam = result.get("rvec")
+            
+            if tvec_tip_cam is not None and rvec_tip_cam is not None:
+                # Creiamo matrice T_cam_tip
+                T_cam_tip = to_matrix(rvec_tip_cam, tvec_tip_cam)
                 
-                # 2. Posa oggetto rispetto alla base del robot
-                # T_base_target = T_base_cam * T_cam_target
-                T_base_target = self._T_base_cam @ T_cam_target
+                # Calcolo Finale: T_base_tip = T_base_cam * T_cam_tip
+                T_base_tip = T_base_cam @ T_cam_tip
                 
-                # 3. Conversione inversa per output
-                rvec_base, tvec_base = from_matrix(T_base_target)
+                # Estraiamo vettori finali nel frame Robot
+                rvec_base, tvec_base = from_matrix(T_base_tip)
+            else:
+                log.warning("Punta non trovata nei risultati di api.py")
 
         # --- 3. FORMATTAZIONE OUTPUT ---
         overlay = result.get("overlay")
@@ -469,9 +528,11 @@ class PoseWorker:
         frame_entry: dict[str, Any] = {
             "file": packet.filename,
             "ok": True,
+            # Dati RAW Camera (Centro Icosaedro)
             "rvec": rvec_flat,
             "tvec": tvec_flat,
-            # NUOVI Dati Robot-Relativi
+            
+            # Dati TRASFORMATI (Punta Penna in Base Robot)
             "rvec_robot": rvec_base.tolist() if rvec_base is not None else None,
             "tvec_robot": tvec_base.tolist() if tvec_base is not None else None,
             
