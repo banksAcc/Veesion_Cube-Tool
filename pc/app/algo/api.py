@@ -11,7 +11,7 @@ from .viz import draw_sphere_overlay, draw_detected_markers
 # Mappa ID Marker -> ID Faccia (omessa per brevità, è la stessa di prima)
 DEFAULT_MARKER_MAP = {
     1: "H5", 2: "H2", 3: "P0", 4: "H3", 5: "H0", 6: "H6", 7: "P2", 8: "P8", 
-    9: "H8", 10: "H4", 11: "P1", 12: "H9", 13: "P7", 14: "P6", 15: "H15", 
+    10: "H8", 9: "H4", 11: "P1", 12: "H9", 13: "P7", 14: "P6", 15: "H15", 
     16: "P4", 17: "H1", 18: "H7", 19: "H14", 20: "H17", 21: "H19", 22: "P3", 
     23: "H13", 24: "P11", 25: "P5", 26: "P10", 27: "H10", 28: "H16", 
     29: "H11", 30: "H18", 31: "H12",
