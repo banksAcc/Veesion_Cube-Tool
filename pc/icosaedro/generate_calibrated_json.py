@@ -58,7 +58,7 @@ MANUAL_OFFSETS = {
     "H0": 90,
     "H3": 120,
     "H2": 210,
-    "P0": 36,
+    "P0": 180,
 }
 
 EDGE_LENGTH_METERS = 0.025

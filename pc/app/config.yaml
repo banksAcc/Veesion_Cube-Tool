@@ -23,7 +23,7 @@ pose:
   ico:
     dictionary: "4X4_50"
     marker_size_mm: 21.679
-    transform_file: algo/transforms_face_to_body.json          # leave null to use built-in transforms
+    transform_file: algo/transforms.json          # leave null to use built-in transforms
   camera_calibration_npz: "../calib/calib_data.npz"  # must contain 'camera_matrix' and 'dist_coeffs'
 
   # NUOVO PARAMETRO: File contenente la matrice 4x4 T_base_camera
